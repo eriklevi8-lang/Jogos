@@ -238,11 +238,7 @@
             <canvas id="tetris" width="200" height="400" class="game-board"></canvas>
         </div>
 
-        <div class="controls-wrapper" style="justify-content: flex-end;">
-            <div class="action-pad">
-                <div class="control-btn" id="btn-rotate" style="width: 90px; height: 90px; border-radius: 50%; background: #4caf50; font-size: 3rem; margin-top: 10px;">↻</div>
-            </div>
-        </div>
+        
     </div>
     
     <div id="modal" class="modal">
@@ -372,6 +368,23 @@
         function draw() {
             ctx.fillStyle = '#2b2b2b';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 0.05;
+            for (let i = 0; i <= arena[0].length; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, arena.length);
+                ctx.stroke();
+            }
+            for (let i = 0; i <= arena.length; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(arena[0].length, i);
+                ctx.stroke();
+            }
+
             drawMatrix(arena, {x: 0, y: 0});
             drawMatrix(player.matrix, player.pos);
         }
@@ -437,16 +450,18 @@
 
         function playerRotate(dir) {
             const pos = player.pos.x;
-            let offset = 1;
             rotate(player.matrix, dir);
+            
+            const kicks = [1, -1, 2, -2, 3, -3];
+            let i = 0;
             while (collide(arena, player)) {
-                player.pos.x += offset;
-                offset = -(offset + (offset > 0 ? 1 : -1));
-                if (offset > player.matrix[0].length) {
+                if (i >= kicks.length) {
                     rotate(player.matrix, -dir);
                     player.pos.x = pos;
                     return;
                 }
+                player.pos.x = pos + kicks[i];
+                i++;
             }
             SoundFX.rotate();
         }
@@ -656,27 +671,7 @@
             }
         });
 
-        const btnRotate = document.getElementById('btn-rotate');
-        if (btnRotate) {
-            btnRotate.addEventListener('touchstart', (e) => {
-                if (e.cancelable) e.preventDefault();
-                btnRotate.classList.add('active-btn');
-                if(!isGameOver) playerRotate(1);
-            }, {passive: false});
-            const stopRotate = (e) => {
-                if (e.cancelable) e.preventDefault();
-                btnRotate.classList.remove('active-btn');
-            };
-            btnRotate.addEventListener('touchend', stopRotate, {passive: false});
-            btnRotate.addEventListener('touchcancel', stopRotate, {passive: false});
-            
-            btnRotate.addEventListener('mousedown', (e) => {
-                btnRotate.classList.add('active-btn');
-                if(!isGameOver) playerRotate(1);
-            });
-            btnRotate.addEventListener('mouseup', () => btnRotate.classList.remove('active-btn'));
-            btnRotate.addEventListener('mouseleave', () => btnRotate.classList.remove('active-btn'));
-        }
+        
 
         initGame();
     </script>
