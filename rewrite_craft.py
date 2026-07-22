@@ -1,5 +1,7 @@
-<!DOCTYPE html>
-<html lang="pt-BR" style="background-color: black;">
+import os
+
+html_content = """<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -139,10 +141,9 @@
         .progress-fill {
             height: 100%;
             width: 0%;
-            background: var(--accent);
+            background: linear-gradient(90deg, #00f2fe 0%, #4facfe 100%);
             border-radius: 10px;
             transition: width 0.4s ease-out;
-            box-shadow: 0 0 10px var(--accent);
         }
 
         .board-wrapper {
@@ -338,10 +339,7 @@
             <button class="icon-btn" onclick="goBack()">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
-            <div style="display:flex; flex-direction: column; align-items: center;">
-                <h1 class="title">Craft Match</h1>
-                <span id="level-name" style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px;">Nível 1 - Floresta Negra</span>
-            </div>
+            <h1 class="title">Craft Match</h1>
             <div style="width:44px"></div>
         </header>
 
@@ -359,7 +357,7 @@
             
             <div style="display:flex; flex-direction: column; gap: 8px;">
                 <div style="display:flex; justify-content: space-between;">
-                    <span class="stat-label" id="level-label">Nível 1</span>
+                    <span class="stat-label">Objetivo de Fase</span>
                     <span class="stat-label" id="goal-text" style="color:white;">0 / 1000</span>
                 </div>
                 <div class="progress-container">
@@ -387,19 +385,13 @@
     <div id="victory-modal" class="modal">
         <div class="modal-content">
             <h2 class="modal-title" style="background: linear-gradient(to right, #f59e0b, #fbbf24); -webkit-background-clip: text;">Vitória!</h2>
-            <p class="modal-desc">Você completou o nível.</p>
-            <button class="primary-btn" onclick="nextLevel()">Próximo Nível</button>
+            <p class="modal-desc">Você alcançou a pontuação alvo.</p>
+            <button class="primary-btn" onclick="initGame()">Próximo Nível</button>
         </div>
     </div>
 
     <script>
         function goBack() { window.location.href = '/'; }
-        
-        function nextLevel() {
-            let currentLevel = parseInt(localStorage.getItem('craftMatchMaxLevel') || '1');
-            localStorage.setItem('craftMatchMaxLevel', currentLevel + 1);
-            initGame();
-        }
 
         // Audio synthesizer
         const SoundFX = {
@@ -430,15 +422,8 @@
         const boardEl = document.getElementById('board');
         const COLS = 8, ROWS = 8;
         
-        const LEVELS = [
-            { bg: '#050508', panel: 'rgba(25, 25, 35, 0.7)', boardBg: '#0b0c10', cellBg: '#13151c', accent: '#00f2fe', items: ['🍄', '🧪', '💎', '🌙', '🔮', '💀'], goal: 1000, moves: 20, name: 'Floresta Negra' },
-            { bg: '#1a0b1c', panel: 'rgba(35, 15, 35, 0.7)', boardBg: '#2a112c', cellBg: '#3a183d', accent: '#b026ff', items: ['✨', '🩸', '👁️', '🦷', '🕷️', '🕸️'], goal: 1500, moves: 25, name: 'Caverna de Sangue' },
-            { bg: '#0b1c1a', panel: 'rgba(15, 35, 30, 0.7)', boardBg: '#112c2a', cellBg: '#183d3a', accent: '#00ffaa', items: ['🔱', '🌊', '⚓', '🐠', '🐚', '🐙'], goal: 2000, moves: 25, name: 'Ruínas Submersas' },
-            { bg: '#1c0b0b', panel: 'rgba(35, 15, 15, 0.7)', boardBg: '#2c1111', cellBg: '#3d1818', accent: '#ff4444', items: ['🔥', '🌋', '☄️', '👺', '👹', '🦴'], goal: 2500, moves: 30, name: 'Vulcão Adormecido' },
-            { bg: '#1c1a0b', panel: 'rgba(35, 30, 15, 0.7)', boardBg: '#2c2a11', cellBg: '#3d3a18', accent: '#ffaa00', items: ['👑', '🪙', '🏆', '🏺', '📜', '⚜️'], goal: 3500, moves: 30, name: 'Templo Dourado' }
-        ];
-        
-        let ITEMS = LEVELS[0].items;
+        // Arcane minimalist items instead of Minecraft
+        const ITEMS = ['🔮', '💠', '🌙', '✨', '🧿', '💎'];
         
         const SPECIALS = {
             CRAFTING: 'crafting_table',     // clears same color (Icon: 📚)
@@ -680,6 +665,7 @@
                 if (score >= goal) {
                     SoundFX.win();
                     document.getElementById('victory-modal').classList.add('visible');
+                    // Unlock next level if level >= 5 is craft match limit etc. (Managed by app)
                 } else if (moves <= 0) {
                     SoundFX.lose();
                     document.getElementById('final-score').innerText = `Pontuação: ${score}`;
@@ -801,25 +787,9 @@
 
         function initGame() {
             document.querySelectorAll('.modal').forEach(m => m.classList.remove('visible'));
-            
-            level = parseInt(localStorage.getItem('craftMatchMaxLevel') || '1');
-            const levelIdx = Math.min(level - 1, LEVELS.length - 1);
-            const levelConfig = LEVELS[levelIdx];
-            
-            // Apply theme
-            document.documentElement.style.setProperty('--bg-color', levelConfig.bg);
-            document.documentElement.style.setProperty('--panel-bg', levelConfig.panel);
-            document.documentElement.style.setProperty('--board-bg', levelConfig.boardBg);
-            document.documentElement.style.setProperty('--cell-bg', levelConfig.cellBg);
-            document.documentElement.style.setProperty('--accent', levelConfig.accent);
-            
-            ITEMS = levelConfig.items;
-            document.getElementById('level-name').innerText = `Nível ${level} - ${levelConfig.name}`;
-            document.getElementById('level-label').innerText = `Nível ${level}`;
-            
             score = 0;
-            moves = levelConfig.moves;
-            goal = levelConfig.goal;
+            moves = 20 + (level * 2); // Slightly more moves per level
+            goal = 1000 + (level * 500);
             updateStats();
             createGrid();
             isProcessing = false;

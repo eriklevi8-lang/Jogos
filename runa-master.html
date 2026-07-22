@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="pt-BR" style="background-color: black;">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Runa Master</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #080312;
+            --accent1: #b026ff;
+            --accent2: #00f2fe;
+            --text-main: #f0f0f0;
+            --panel-bg: rgba(10, 5, 20, 0.8);
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-main);
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #game-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: auto;
+        }
+
+        .icon-btn {
+            background: var(--panel-bg);
+            border: 1px solid rgba(176, 38, 255, 0.3);
+            backdrop-filter: blur(10px);
+            border-radius: 50%;
+            width: 44px; height: 44px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 0 15px rgba(176, 38, 255, 0.2);
+        }
+
+        .icon-btn:active { 
+            transform: scale(0.9);
+            background: rgba(176, 38, 255, 0.2);
+        }
+
+        .stats {
+            background: var(--panel-bg);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 0.5rem 1rem;
+            display: flex;
+            gap: 1.5rem;
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.2);
+        }
+
+        .stat-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            color: #a0a0b0;
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: 900;
+            background: linear-gradient(to right, var(--accent2), var(--accent1));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1.1;
+        }
+
+        .modal {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .modal.visible { opacity: 1; pointer-events: auto; }
+        
+        .modal-content {
+            background: var(--bg-color);
+            border: 1px solid rgba(176, 38, 255, 0.5);
+            border-radius: 24px;
+            padding: 2.5rem 2rem;
+            text-align: center;
+            max-width: 90%;
+            width: 320px;
+            box-shadow: 0 20px 50px rgba(176, 38, 255, 0.3);
+            transform: translateY(20px);
+            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .modal.visible .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-title {
+            font-size: 2.2rem;
+            margin-bottom: 0.5rem;
+            font-weight: 900;
+            background: linear-gradient(to right, #ff2a5f, #b026ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .modal-desc {
+            color: #a0a0b0;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .primary-btn {
+            background: linear-gradient(45deg, var(--accent1), var(--accent2));
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            font-weight: 800;
+            border-radius: 30px;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 5px 15px rgba(176, 38, 255, 0.4);
+        }
+        .primary-btn:active { 
+            transform: scale(0.95);
+        }
+
+        /* Screen flash on hit */
+        #flash {
+            position: absolute;
+            inset: 0;
+            background: red;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 50;
+            transition: opacity 0.1s;
+        }
+        
+        #scanline {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 2;
+            opacity: 0.3;
+        }
+    </style>
+    <!-- Include Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div id="flash"></div>
+    <div id="scanline"></div>
+    <canvas id="game-canvas"></canvas>
+
+    <div class="ui-layer">
+        <header>
+            <button class="icon-btn" onclick="goBack()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div style="display:flex; flex-direction: column; align-items: center; pointer-events: auto;">
+                <span id="level-name" style="font-size: 0.9rem; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.8);">Nível 1</span>
+                <span id="level-goal" style="font-size: 0.7rem; font-weight: 600; color: #00f2fe; text-transform: uppercase; letter-spacing: 1px;">Objetivo: 300m</span>
+            </div>
+            <div class="stats">
+                <div class="stat-group">
+                    <span class="stat-label">Runas</span>
+                    <span class="stat-value" id="score">0</span>
+                </div>
+                <div class="stat-group">
+                    <span class="stat-label">Distância</span>
+                    <span class="stat-value" id="distance">0m</span>
+                </div>
+            </div>
+        </header>
+
+        <div id="profile-panel" style="position: absolute; top: 5rem; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1); padding: 0.4rem 1rem; border-radius: 20px; pointer-events: auto;">
+            <div style="font-size: 0.75rem; font-weight: 800; color: #fff; letter-spacing: 1px;">TOTAL LVL <span id="total-level" style="color: #00f2fe; font-size: 0.9rem;">1</span></div>
+            <div id="badge-master" style="display: none; background: linear-gradient(90deg, #f59e0b, #fbbf24); -webkit-background-clip: text; color: transparent; font-size: 0.7rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; padding-left: 10px; border-left: 1px solid rgba(255,255,255,0.2);">MESTRE DO PORTAL</div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="gameover-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title">BUSTED</h2>
+            <p class="modal-desc" id="final-stats">Runas: 0 | Dist: 0m</p>
+            <button class="primary-btn" onclick="startGame()">Tentar Novamente</button>
+        </div>
+    </div>
+    
+    <div id="victory-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title" style="background: linear-gradient(to right, #f59e0b, #fbbf24); -webkit-background-clip: text;">Completado!</h2>
+            <p class="modal-desc">Você alcançou o objetivo de distância.</p>
+            <button class="primary-btn" onclick="nextLevel()">Próximo Nível</button>
+        </div>
+    </div>
+    
+    <div id="start-modal" class="modal visible">
+        <div class="modal-content">
+            <h2 class="modal-title" style="background: linear-gradient(to right, #00f2fe, #4facfe); -webkit-background-clip: text;" id="start-title">RUNA MASTER</h2>
+            <p class="modal-desc">Toque nas laterais ou deslize<br>para mudar de faixa.<br>Deslize para cima para pular.<br>Deslize para baixo para abaixar.</p>
+            <button class="primary-btn" onclick="startGame()">VAMO NESSA</button>
+        </div>
+    </div>
+
+    <script>
+        function goBack() { window.location.href = '/'; }
+
+        // Audio System (Trap Beat + SFX)
+        const AudioSys = {
+            ctx: null,
+            init: function() {
+                if(!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            },
+            playSynth: function(freq, type, duration, vol=0.1) {
+                if(!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(freq/2, this.ctx.currentTime + duration);
+                gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            },
+            play808: function() {
+                // deep bass drop
+                this.playSynth(150, 'sine', 0.8, 0.3);
+            },
+            playHiHat: function() {
+                // noisy short burst
+                this.playSynth(8000, 'square', 0.05, 0.05);
+            },
+            playCoin: function() {
+                // High pitch chime
+                this.playSynth(1200, 'sine', 0.2, 0.1);
+                setTimeout(() => this.playSynth(1600, 'sine', 0.3, 0.1), 100);
+            },
+            playCrash: function() {
+                this.playSynth(100, 'sawtooth', 0.5, 0.3);
+            }
+        };
+
+        // THREE.JS SETUP
+        const canvas = document.getElementById('game-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x080312);
+        scene.fog = new THREE.FogExp2(0x080312, 0.03); // Neon fog
+
+        const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 100);
+        
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+        scene.add(ambientLight);
+        
+        const dirLight = new THREE.DirectionalLight(0xb026ff, 1);
+        dirLight.position.set(5, 10, 5);
+        scene.add(dirLight);
+
+        const pointLight = new THREE.PointLight(0x00f2fe, 2, 50);
+        scene.add(pointLight);
+
+        // Grid Floor
+        const gridHelper = new THREE.GridHelper(100, 50, 0xb026ff, 0x330066);
+        gridHelper.position.y = 0;
+        scene.add(gridHelper);
+
+        // Game Variables
+        const LANE_WIDTH = 2.5;
+        let lanes = [-LANE_WIDTH, 0, LANE_WIDTH];
+        let currentLane = 1; // Middle
+        
+        let player, playerBox;
+        let obstacles = [];
+        let collectibles = [];
+        
+        let isPlaying = false;
+        let speed = 0.3;
+        let score = 0;
+        let distance = 0;
+        
+        // Jump mechanics
+        let isJumping = false;
+        let jumpVelocity = 0;
+        let isCrouching = false;
+        let crouchTimer = 0;
+        const GRAVITY = -0.025;
+        const JUMP_FORCE = 0.45;
+
+        // Colors
+        let COLOR_OBSTACLE = 0xff2a5f;
+        let COLOR_COLLECTIBLE = 0x00f2fe;
+        
+        let level = 1;
+        let goalDistance = 300;
+        
+        const LEVELS = [
+            { name: 'Neon City', dist: 300, bg: 0x080312, fog: 0x080312, grid1: 0xb026ff, grid2: 0x330066, dirLight: 0xb026ff, pointLight: 0x00f2fe, obs: 0xff2a5f, col: 0x00f2fe, pCol: 0x00f2fe, pEmi: 0x0088aa },
+            { name: 'Cyber Jungle', dist: 500, bg: 0x031208, fog: 0x031208, grid1: 0x00ff00, grid2: 0x004400, dirLight: 0x00ff00, pointLight: 0xff00ff, obs: 0xff8800, col: 0x00ff00, pCol: 0xff00ff, pEmi: 0xaa00aa },
+            { name: 'Crimson Core', dist: 700, bg: 0x120303, fog: 0x120303, grid1: 0xff0000, grid2: 0x440000, dirLight: 0xff0000, pointLight: 0xffff00, obs: 0x00f2fe, col: 0xffff00, pCol: 0xffff00, pEmi: 0xaaaa00 },
+            { name: 'Abyss', dist: 1000, bg: 0x000000, fog: 0x000000, grid1: 0xffffff, grid2: 0x333333, dirLight: 0xffffff, pointLight: 0x0000ff, obs: 0xff0000, col: 0xffffff, pCol: 0x0000ff, pEmi: 0x000088 },
+            { name: 'Golden Vault', dist: 1500, bg: 0x1a1200, fog: 0x1a1200, grid1: 0xffd700, grid2: 0x664400, dirLight: 0xffd700, pointLight: 0xffffff, obs: 0xff00ff, col: 0xffffff, pCol: 0xffffff, pEmi: 0xaaaaaa }
+        ];
+
+        let pCol = 0x00f2fe;
+        let pEmi = 0x0088aa;
+
+        function createPlayer() {
+            // Cool neon sphere as player
+            const geo = new THREE.IcosahedronGeometry(0.75, 1);
+            const mat = new THREE.MeshStandardMaterial({ 
+                color: pCol,
+                emissive: pEmi,
+                roughness: 0.1,
+                metalness: 0.8,
+                flatShading: true
+            });
+            player = new THREE.Mesh(geo, mat);
+            player.position.set(0, 0.75, 0);
+            scene.add(player);
+            
+            // Hitbox
+            playerBox = new THREE.Box3();
+        }
+
+        function createObstacle(zPos) {
+            const laneIdx = Math.floor(Math.random() * 3);
+            const r = Math.random();
+            let type = 'hurdle';
+            if (r > 0.66) type = 'overhead';
+            else if (r > 0.33) type = 'wall';
+            
+            const group = new THREE.Group();
+            
+            const mat = new THREE.MeshStandardMaterial({ 
+                color: COLOR_OBSTACLE,
+                emissive: 0x880022,
+                wireframe: true // Glitchy aesthetic, all wireframe
+            });
+            
+            let mainMesh;
+
+            if(type === 'hurdle') {
+                const geo = new THREE.BoxGeometry(2, 0.6, 1);
+                mainMesh = new THREE.Mesh(geo, mat);
+                mainMesh.position.y = 0.3; // Low barrier
+                group.add(mainMesh);
+            } else if (type === 'overhead') {
+                const geo = new THREE.BoxGeometry(2, 0.6, 1);
+                mainMesh = new THREE.Mesh(geo, mat);
+                mainMesh.position.y = 1.1; // High barrier (requires ducking)
+                group.add(mainMesh);
+                
+                // Visual pillars
+                const pillarGeo = new THREE.BoxGeometry(0.2, 1.1, 0.2);
+                const p1 = new THREE.Mesh(pillarGeo, mat);
+                p1.position.set(-0.9, 0.55, 0);
+                const p2 = new THREE.Mesh(pillarGeo, mat);
+                p2.position.set(0.9, 0.55, 0);
+                group.add(p1);
+                group.add(p2);
+            } else {
+                const geo = new THREE.BoxGeometry(2, 3, 1);
+                mainMesh = new THREE.Mesh(geo, mat);
+                mainMesh.position.y = 1.5; // Full wall
+                group.add(mainMesh);
+            }
+            
+            group.position.set(lanes[laneIdx], 0, zPos);
+            scene.add(group);
+            
+            obstacles.push({
+                mesh: group,
+                hitboxMesh: mainMesh,
+                box: new THREE.Box3()
+            });
+
+            // Maybe spawn a collectible in another lane
+            if (Math.random() > 0.3) {
+                const cLane = (laneIdx + 1 + Math.floor(Math.random() * 2)) % 3;
+                createCollectible(cLane, zPos);
+            }
+        }
+
+        function createCollectible(laneIdx, zPos) {
+            const geo = new THREE.OctahedronGeometry(0.5);
+            const mat = new THREE.MeshStandardMaterial({ 
+                color: COLOR_COLLECTIBLE,
+                emissive: 0x005588,
+                wireframe: true
+            });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(lanes[laneIdx], 1, zPos);
+            scene.add(mesh);
+            
+            collectibles.push({
+                mesh,
+                box: new THREE.Box3()
+            });
+        }
+
+        function initScene() {
+            if(player) {
+                scene.remove(player);
+                obstacles.forEach(o => scene.remove(o.mesh));
+                collectibles.forEach(c => scene.remove(c.mesh));
+                obstacles = [];
+                collectibles = [];
+            }
+            
+            // Apply Level Config
+            level = parseInt(localStorage.getItem('runaMaxLevel') || '1');
+            const lIdx = Math.min(level - 1, LEVELS.length - 1);
+            const lCfg = LEVELS[lIdx];
+            
+            goalDistance = lCfg.dist;
+            COLOR_OBSTACLE = lCfg.obs;
+            COLOR_COLLECTIBLE = lCfg.col;
+            pCol = lCfg.pCol;
+            pEmi = lCfg.pEmi;
+            
+            scene.background = new THREE.Color(lCfg.bg);
+            scene.fog = new THREE.FogExp2(lCfg.fog, 0.03);
+            
+            dirLight.color.setHex(lCfg.dirLight);
+            pointLight.color.setHex(lCfg.pointLight);
+            
+            gridHelper.material.color.setHex(lCfg.grid1);
+            
+            document.getElementById('level-name').innerText = `Nível ${level} - ${lCfg.name}`;
+            document.getElementById('level-goal').innerText = `Objetivo: ${goalDistance}m`;
+            
+            updateProfilePanel();
+            
+            createPlayer();
+            camera.position.set(0, 4, 8);
+            camera.lookAt(0, 0, -10);
+
+            // Initial spawns
+            for(let i=0; i<10; i++) {
+                createObstacle(-40 - (i * 30));
+            }
+        }
+
+        // Input Handling (Swipe & Tap)
+        let touchStartX = 0;
+        let touchStartY = 0;
+        
+        document.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, {passive: true});
+
+        document.addEventListener('touchend', e => {
+            handleInputEnd(e.changedTouches[0].screenX, e.changedTouches[0].screenY);
+        });
+        
+        let isMouseDown = false;
+        document.addEventListener('mousedown', e => {
+            if (e.target.tagName === 'BUTTON') return;
+            isMouseDown = true;
+            touchStartX = e.clientX;
+            touchStartY = e.clientY;
+        });
+        
+        document.addEventListener('mouseup', e => {
+            if (!isMouseDown) return;
+            isMouseDown = false;
+            handleInputEnd(e.clientX, e.clientY);
+        });
+
+        function handleInputEnd(endX, endY) {
+            if(!isPlaying) return;
+            
+            const dx = endX - touchStartX;
+            const dy = endY - touchStartY;
+            
+            if(Math.abs(dx) < 15 && Math.abs(dy) < 15) {
+                // Tap detected
+                const screenWidth = window.innerWidth;
+                if (endX < screenWidth * 0.33) {
+                    if(currentLane > 0) { currentLane--; AudioSys.playHiHat(); }
+                } else if (endX > screenWidth * 0.66) {
+                    if(currentLane < 2) { currentLane++; AudioSys.playHiHat(); }
+                } else {
+                    if(!isJumping) {
+                        isJumping = true;
+                        jumpVelocity = JUMP_FORCE;
+                        AudioSys.play808();
+                    }
+                }
+            } else if(Math.abs(dx) > Math.abs(dy)) {
+                // Horizontal Swipe
+                if(Math.abs(dx) > 30) {
+                    if(dx > 0 && currentLane < 2) {
+                        currentLane++;
+                        AudioSys.playHiHat();
+                    } else if(dx < 0 && currentLane > 0) {
+                        currentLane--;
+                        AudioSys.playHiHat();
+                    }
+                }
+            } else {
+                // Vertical Swipe
+                if(dy < -20 && !isJumping) { // Swipe up
+                    isJumping = true;
+                    jumpVelocity = JUMP_FORCE;
+                    AudioSys.play808();
+                } else if (dy > 20) { // Swipe down
+                    if (isJumping) {
+                        jumpVelocity -= 0.3; // Fast fall
+                    } else if (!isCrouching) {
+                        isCrouching = true;
+                        crouchTimer = 20; // 20 frames
+                        AudioSys.playHiHat();
+                    }
+                }
+            }
+        }
+
+        // Keyboard for desktop testing
+        document.addEventListener('keydown', e => {
+            if(!isPlaying) return;
+            if(e.key === 'ArrowLeft' || e.key === 'a') {
+                if(currentLane > 0) { currentLane--; AudioSys.playHiHat(); }
+            }
+            if(e.key === 'ArrowRight' || e.key === 'd') {
+                if(currentLane < 2) { currentLane++; AudioSys.playHiHat(); }
+            }
+            if((e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') && !isJumping) {
+                isJumping = true;
+                jumpVelocity = JUMP_FORCE;
+                AudioSys.play808();
+            }
+            if((e.key === 'ArrowDown' || e.key === 's') && !isCrouching) {
+                if (isJumping) {
+                    jumpVelocity -= 0.3;
+                } else {
+                    isCrouching = true;
+                    crouchTimer = 20;
+                    AudioSys.playHiHat();
+                }
+            }
+        });
+
+        function updateLogic() {
+            if(!isPlaying) return;
+
+            // Player lateral movement (smooth)
+            const targetX = lanes[currentLane];
+            player.position.x += (targetX - player.position.x) * 0.4;
+            
+            // Rolling effect
+            player.rotation.x -= speed * 3;
+            player.rotation.z = (targetX - player.position.x) * 0.4; // Lean effect
+            
+            let targetScale = 1;
+            let targetY = 0.75;
+
+            // Player crouch
+            if(isCrouching) {
+                targetScale = 0.5;
+                targetY = 0.375;
+                crouchTimer--;
+                if(crouchTimer <= 0) {
+                    isCrouching = false;
+                }
+            }
+
+            // Player jump
+            if(isJumping) {
+                player.position.y += jumpVelocity;
+                jumpVelocity += GRAVITY;
+                
+                if(player.position.y <= targetY) {
+                    player.position.y = targetY;
+                    isJumping = false;
+                    jumpVelocity = 0;
+                }
+            } else {
+                player.position.y += (targetY - player.position.y) * 0.4;
+            }
+            
+            const currentScale = player.scale.x;
+            const newScale = currentScale + (targetScale - currentScale) * 0.4;
+            player.scale.set(newScale, newScale, newScale);
+            
+            // Camera tracking
+            camera.position.x += (player.position.x * 0.7 - camera.position.x) * 0.2;
+            camera.lookAt(camera.position.x * 0.5, 1, -10);
+
+            // Move floor texture
+            gridHelper.position.z += speed;
+            if(gridHelper.position.z > 5) gridHelper.position.z -= 10;
+            
+            // Move Point light to follow player roughly
+            pointLight.position.set(player.position.x, player.position.y + 2, player.position.z);
+
+            // Update Hitbox
+            playerBox.setFromObject(player);
+            // Shrink hitbox slightly for forgiveness
+            playerBox.expandByScalar(-0.2);
+
+            // Obstacles
+            for(let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.mesh.position.z += speed;
+                
+                // Temporarily get world position of hitboxMesh for accurate AABB
+                obs.mesh.updateMatrixWorld(true);
+                obs.box.setFromObject(obs.hitboxMesh);
+                
+                // Collision
+                if(playerBox.intersectsBox(obs.box)) {
+                    gameOver();
+                    return;
+                }
+                
+                // Remove passed
+                if(obs.mesh.position.z > camera.position.z) {
+                    scene.remove(obs.mesh);
+                    obstacles.splice(i, 1);
+                    // Spawn new ahead
+                    createObstacle(-300);
+                }
+            }
+
+            // Collectibles
+            for(let i = collectibles.length - 1; i >= 0; i--) {
+                const c = collectibles[i];
+                c.mesh.position.z += speed;
+                c.mesh.rotation.y += 0.05;
+                c.mesh.rotation.x += 0.05;
+                c.box.setFromObject(c.mesh);
+                
+                if(playerBox.intersectsBox(c.box)) {
+                    score++;
+                    document.getElementById('score').innerText = score;
+                    AudioSys.playCoin();
+                    scene.remove(c.mesh);
+                    collectibles.splice(i, 1);
+                } else if(c.mesh.position.z > camera.position.z) {
+                    scene.remove(c.mesh);
+                    collectibles.splice(i, 1);
+                }
+            }
+
+            // Speed up progressively
+            speed += 0.0001;
+            distance += speed / 2;
+            document.getElementById('distance').innerText = Math.floor(distance) + 'm';
+            
+            if (distance >= goalDistance) {
+                levelComplete();
+                return;
+            }
+        }
+        
+        function levelComplete() {
+            isPlaying = false;
+            saveProgress();
+            document.getElementById('victory-modal').classList.add('visible');
+        }
+
+        function updateProfilePanel() {
+            let totalDist = parseInt(localStorage.getItem('runaTotalDist') || '0');
+            let totalLvl = Math.floor(totalDist / 500) + 1;
+            document.getElementById('total-level').innerText = totalLvl;
+            
+            if (totalLvl >= 5) {
+                document.getElementById('badge-master').style.display = 'block';
+            }
+        }
+
+        function saveProgress() {
+            let currentTotal = parseInt(localStorage.getItem('runaTotalDist') || '0');
+            localStorage.setItem('runaTotalDist', currentTotal + Math.floor(distance));
+            updateProfilePanel();
+        }
+
+        function gameOver() {
+            isPlaying = false;
+            saveProgress();
+            AudioSys.playCrash();
+            const flash = document.getElementById('flash');
+            flash.style.opacity = 1;
+            setTimeout(() => flash.style.opacity = 0, 100);
+            
+            document.getElementById('final-stats').innerText = `Runas: ${score} | Dist: ${Math.floor(distance)}m`;
+            document.getElementById('gameover-modal').classList.add('visible');
+        }
+
+        function startGame() {
+            AudioSys.init();
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('visible'));
+            score = 0;
+            distance = 0;
+            speed = 0.5;
+            currentLane = 1;
+            isJumping = false;
+            isCrouching = false;
+            crouchTimer = 0;
+            
+            document.getElementById('score').innerText = '0';
+            document.getElementById('distance').innerText = '0m';
+            
+            initScene();
+            isPlaying = true;
+        }
+        
+        function nextLevel() {
+            let currentLevel = parseInt(localStorage.getItem('runaMaxLevel') || '1');
+            localStorage.setItem('runaMaxLevel', currentLevel + 1);
+            startGame();
+        }
+
+        // Render Loop
+        function animate() {
+            requestAnimationFrame(animate);
+            updateLogic();
+            renderer.render(scene, camera);
+        }
+
+        // Handle Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Start render loop (idle state until play is pressed)
+        initScene();
+        animate();
+
+    </script>
+</body>
+</html>

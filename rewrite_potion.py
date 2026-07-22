@@ -1,4 +1,6 @@
-<!DOCTYPE html>
+import re
+
+html_content = """<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -481,13 +483,14 @@
 
         function calculateLinesForNextLevel() {
             // Level 1: 10 lines
-            // Level 2: 12 lines, etc.
+            // Level 2: +12 lines (22 total)
+            // Starts increasing gradually
             return 10 + (player.level - 1) * 2;
         }
 
         function updateSpeed() {
             // Gradual speed increase
-            // Base speed 1000ms, decreases by ~10% each level, minimum 150ms
+            // Base speed 1000ms, decreases by 10% each level, minimum 150ms
             dropInterval = Math.max(150, 1000 * Math.pow(0.9, player.level - 1));
         }
 
@@ -507,24 +510,14 @@
                 cleared++;
             }
             if (cleared > 0) {
-                let linesRequired = calculateLinesForNextLevel();
+                const linesRequired = calculateLinesForNextLevel();
                 player.levelLines += cleared;
                 
-                let leveledUp = false;
-                while (player.levelLines >= linesRequired) {
+                if (player.levelLines >= linesRequired) {
                     player.level++;
                     player.levelLines -= linesRequired;
-                    leveledUp = true;
-                    linesRequired = calculateLinesForNextLevel(); // update for next iterations if leveled up multiple times
-                }
-                
-                if (leveledUp) {
                     SoundFX.levelUp();
                     updateSpeed();
-                    // Optional: unlock next game (e.g. if level >= 5, craft match unlocks potion mix... etc)
-                    if (player.level >= 5) {
-                        localStorage.setItem('craftMatchMaxLevel', Math.max(5, parseInt(localStorage.getItem('craftMatchMaxLevel') || '1')).toString());
-                    }
                 } else {
                     SoundFX.clear();
                 }
@@ -555,7 +548,7 @@
             
             const req = calculateLinesForNextLevel();
             document.getElementById('goal-text').innerText = `${player.levelLines} / ${req}`;
-            document.getElementById('goal-fill').style.width = `${Math.min(100, (player.levelLines / req) * 100)}%`;
+            document.getElementById('goal-fill').style.width = `${(player.levelLines / req) * 100}%`;
         }
 
         const player = {
@@ -624,9 +617,9 @@
             // Block size on screen
             const displayBlockSize = rect.width / COLS;
             
-            // Sensitivity modifiers (1 = 1 block exact dragging)
-            const moveThresholdX = displayBlockSize * 0.9; 
-            const dropThresholdY = displayBlockSize * 0.9;
+            // Sensitivity modifiers
+            const moveThresholdX = displayBlockSize * 0.8; 
+            const dropThresholdY = displayBlockSize * 0.8;
 
             if (Math.abs(currentX - dragStartX) > 10 || Math.abs(currentY - dragStartY) > 10) {
                 hasDragged = true;
@@ -649,7 +642,7 @@
             }
             
             // Allow fast drop by swiping down hard
-            if (dy > dropThresholdY * 4) {
+            if (dy > dropThresholdY * 3) {
                  while(!collide(arena, player)) {
                      player.pos.y++;
                  }
@@ -725,8 +718,8 @@
             
             const rect = canvas.getBoundingClientRect();
             const displayBlockSize = rect.width / COLS;
-            const moveThresholdX = displayBlockSize * 0.9; 
-            const dropThresholdY = displayBlockSize * 0.9;
+            const moveThresholdX = displayBlockSize * 0.8; 
+            const dropThresholdY = displayBlockSize * 0.8;
 
             if (Math.abs(currentX - dragStartX) > 10 || Math.abs(currentY - dragStartY) > 10) {
                 hasDragged = true;
