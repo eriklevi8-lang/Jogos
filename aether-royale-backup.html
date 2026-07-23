@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aether Royale</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <style>
+        
+        :root {
+            --primary: #3b82f6;
+            --secondary: #a855f7;
+            --elixir: #d946ef;
+            --enemy: #ef4444;
+            --bg: #1e1e24;
+            --wood-dark: #3e2723;
+            --wood-light: #5d4037;
+            --wood-panel: #8d6e63;
+        }
+        * { box-sizing: border-box; font-family: 'Outfit', sans-serif; user-select: none; -webkit-user-select: none; }
+        body {
+            margin: 0; padding: 0;
+            background: var(--bg);
+            color: white;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            touch-action: none;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: #2a2a2a;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        #header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 15px;
+            background: linear-gradient(to bottom, #111, rgba(0,0,0,0));
+            position: absolute;
+            top: 0; left: 0; width: 100%;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .btn-back {
+            background: var(--wood-light);
+            border: 2px solid var(--wood-dark);
+            color: white;
+            border-radius: 6px;
+            padding: 4px 10px;
+            cursor: pointer;
+            font-weight: 800;
+            pointer-events: auto;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            box-shadow: 0 4px 0 var(--wood-dark);
+        }
+        .btn-back:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 var(--wood-dark);
+        }
+
+        #timer-container {
+            background: rgba(0,0,0,0.7);
+            border: 2px solid #555;
+            border-radius: 8px;
+            padding: 2px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #timer-label {
+            font-size: 0.55rem;
+            color: #ccc;
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-bottom: -2px;
+        }
+
+        #timer {
+            font-size: 1.1rem;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 1px 1px 0 #000;
+        }
+
+        #canvas-wrapper {
+            flex: 1;
+            position: relative;
+            background: #4ade80;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #ui-layer {
+            height: 150px;
+            background: linear-gradient(180deg, var(--wood-light), var(--wood-dark));
+            border-top: 4px solid #2e1a11;
+            display: flex;
+            flex-direction: column;
+            padding: 8px 5px 5px 5px;
+            z-index: 10;
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
+            position: relative;
+        }
+        
+        /* Wood texture overlay */
+        #ui-layer::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: repeating-linear-gradient(90deg, rgba(0,0,0,0.05) 0px, rgba(0,0,0,0.05) 2px, transparent 2px, transparent 4px);
+            pointer-events: none;
+        }
+
+        .cards-container {
+            display: flex;
+            gap: 8px;
+            padding: 0 5px;
+            flex: 1;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .card-slot {
+            flex: 1;
+            max-width: 70px;
+            aspect-ratio: 5/6;
+            background: linear-gradient(135deg, #cbd5e1, #94a3b8);
+            border: 3px solid #334155;
+            border-radius: 6px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.1s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.4), inset 0 0 10px rgba(255,255,255,0.5);
+        }
+
+        .card-slot.selected {
+            transform: translateY(-10px);
+            border-color: #fde047;
+            box-shadow: 0 10px 10px rgba(0,0,0,0.5), inset 0 0 10px rgba(253, 224, 71, 0.5), 0 0 15px rgba(253, 224, 71, 0.6);
+        }
+
+        .card-slot.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            filter: grayscale(1) brightness(0.7);
+            transform: translateY(0);
+        }
+
+        .card-icon {
+            font-size: 2.2rem;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
+        }
+
+        .card-cost {
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(180deg, #f0abfc, #d946ef);
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 900;
+            border: 2px solid #4a044e;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.6);
+            text-shadow: 1px 1px 0 #000;
+            z-index: 5;
+        }
+        
+        .card-cost::before {
+            content: '';
+            position: absolute;
+            top: 2px; left: 4px; right: 4px; bottom: 8px;
+            background: rgba(255,255,255,0.4);
+            border-radius: 50%;
+        }
+
+        .next-card-wrapper {
+            display: flex;
+            align-items: center;
+            margin-left: 5px;
+            padding-left: 10px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .next-card-container {
+            width: 50px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .next-label {
+            font-size: 0.65rem;
+            color: #f8fafc;
+            text-transform: uppercase;
+            font-weight: 800;
+            margin-bottom: 2px;
+            text-shadow: 1px 1px 2px #000;
+        }
+
+        .next-slot {
+            width: 45px;
+            aspect-ratio: 5/6;
+            background: linear-gradient(135deg, #94a3b8, #64748b);
+            border: 2px solid #334155;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            position: relative;
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.5);
+        }
+
+        #elixir-container {
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            margin-top: 10px;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .elixir-drop-icon {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(180deg, #f0abfc, #d946ef);
+            border-radius: 50% 50% 50% 5%;
+            transform: rotate(-45deg);
+            border: 2px solid #4a044e;
+            box-shadow: inset 2px 2px 5px rgba(255,255,255,0.5), 0 2px 4px rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: -10px;
+            z-index: 3;
+            position: relative;
+        }
+        .elixir-drop-icon span {
+            transform: rotate(45deg);
+            font-weight: 900;
+            font-size: 0.9rem;
+            color: white;
+            text-shadow: 1px 1px 1px #000;
+        }
+
+        #elixir-bar-container {
+            flex: 1;
+            height: 22px;
+            background: #1e1e1e;
+            border-radius: 4px;
+            position: relative;
+            border: 2px solid #000;
+            overflow: hidden;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.8);
+            display: flex;
+        }
+        
+        /* Bar segments */
+        .elixir-segment {
+            flex: 1;
+            border-right: 1px solid rgba(0,0,0,0.5);
+            height: 100%;
+            z-index: 2;
+        }
+        .elixir-segment:last-child { border-right: none; }
+
+        #elixir-fill {
+            position: absolute;
+            top: 0; left: 0;
+            height: 100%;
+            background: linear-gradient(180deg, #e879f9, #c026d3);
+            width: 50%;
+            transition: width 0.1s linear;
+            z-index: 1;
+            box-shadow: inset 0 2px 5px rgba(255,255,255,0.4);
+        }
+
+        #game-over {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            backdrop-filter: blur(4px);
+        }
+        #game-over h1 { 
+            font-size: 3.5rem; 
+            margin: 0; 
+            text-transform: uppercase; 
+            font-weight: 900;
+            -webkit-text-stroke: 2px black;
+        }
+        .win { color: #4ade80; text-shadow: 0 5px 15px rgba(34, 197, 94, 0.6); }
+        .lose { color: #f87171; text-shadow: 0 5px 15px rgba(239, 68, 68, 0.6); }
+        .draw { color: #94a3b8; text-shadow: 0 5px 15px rgba(148, 163, 184, 0.6); }
+        
+        #btn-restart {
+            margin-top: 30px;
+            padding: 12px 30px;
+            font-size: 1.4rem;
+            background: linear-gradient(to bottom, #3b82f6, #1d4ed8);
+            color: white;
+            border: 2px solid #000;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 900;
+            text-transform: uppercase;
+            box-shadow: 0 4px 0 #1e3a8a, 0 8px 15px rgba(0,0,0,0.5);
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        #btn-restart:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #1e3a8a, 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        .float-text {
+            position: absolute;
+            pointer-events: none;
+            font-weight: 900;
+            font-size: 16px;
+            animation: floatUp 1s ease-out forwards;
+            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 4px rgba(0,0,0,0.8);
+            z-index: 5;
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-40px) scale(1.3); opacity: 0; }
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="header">
+        <button class="btn-back" onclick="window.location.href='/'">Voltar</button>
+        <div id="timer-container">
+            <span id="timer-label">Tempo Final</span>
+            <div id="timer">3:00</div>
+        </div>
+        <div style="width: 60px"></div>
+    </div>
+    
+    <div id="canvas-wrapper">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <div id="ui-layer">
+        <div class="cards-container">
+            <div id="hand-slots" style="display:flex; flex:1; justify-content:center; gap:8px;">
+                <!-- Cards injected here -->
+            </div>
+            <div class="next-card-wrapper">
+                <div class="next-card-container">
+                    <span class="next-label">Próxima:</span>
+                    <div class="next-slot" id="next-slot">
+                        <span class="card-icon" id="next-icon">?</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="elixir-container">
+            <div class="elixir-drop-icon"><span id="elixir-text-num">5</span></div>
+            <div id="elixir-bar-container">
+                <div id="elixir-fill"></div>
+                <div class="elixir-segment"></div><div class="elixir-segment"></div><div class="elixir-segment"></div>
+                <div class="elixir-segment"></div><div class="elixir-segment"></div><div class="elixir-segment"></div>
+                <div class="elixir-segment"></div><div class="elixir-segment"></div><div class="elixir-segment"></div>
+                <div class="elixir-segment"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-over">
+        <h1 id="go-title">Vitória!</h1>
+        <button id="btn-restart" onclick="location.reload()">Jogar Novamente</button>
+    </div>
+</div>
+
+<script>
+/**
+ * AETHER ROYALE - ENGINE
+ */
+
+// --- Constants & Config ---
+const COLS = 18;
+const ROWS = 32;
+
+// The map is divided: 0 to 15 is Enemy, 16 to 31 is Player
+const RIVER_Y = 15.5; // Visual river area ~15 to 16
+const BRIDGE_L_X = 4; // Col 3 and 4
+const BRIDGE_R_X = 14; // Col 13 and 14
+
+const CARDS_DB = {
+    guardiao: { id: 'guardiao', name: 'Guardião de Ferro', cost: 3, icon: '🛡️', type: 'troop', count: 1, hp: 800, damage: 75, atkSpeed: 1.2, speed: 2.0, range: 0.8, isAir: false, targetAir: false, targetBuildingOnly: false, radius: 0.4, aoe: false },
+    espectros: { id: 'espectros', name: 'Horda de Espectros', cost: 1, icon: '💀', type: 'troop', count: 3, hp: 30, damage: 30, atkSpeed: 1.0, speed: 3.5, range: 0.6, isAir: false, targetAir: false, targetBuildingOnly: false, radius: 0.25, aoe: false },
+    golem: { id: 'golem', name: 'Golem de Pedras Arcanas', cost: 5, icon: '🪨', type: 'troop', count: 1, hp: 2000, damage: 120, atkSpeed: 1.5, speed: 1.5, range: 1.0, isAir: false, targetAir: false, targetBuildingOnly: true, radius: 0.6, aoe: false },
+    lorde: { id: 'lorde', name: 'Lorde do Machado', cost: 4, icon: '🪓', type: 'troop', count: 1, hp: 880, damage: 120, atkSpeed: 1.5, speed: 2.5, range: 1.2, isAir: false, targetAir: false, targetBuildingOnly: false, radius: 0.4, aoe: true, aoeRadius: 1.5 },
+    atiradoras: { id: 'atiradoras', name: 'Atiradoras da Floresta', cost: 3, icon: '🏹', type: 'troop', count: 2, hp: 120, damage: 40, atkSpeed: 1.2, speed: 2.0, range: 5.0, isAir: false, targetAir: true, targetBuildingOnly: false, radius: 0.3, aoe: false },
+    dracos: { id: 'dracos', name: 'Dracos Elementais', cost: 3, icon: '🦇', type: 'troop', count: 3, hp: 90, damage: 40, atkSpeed: 1.0, speed: 4.0, range: 2.0, isAir: true, targetAir: true, targetBuildingOnly: false, radius: 0.3, aoe: false },
+    maga: { id: 'maga', name: 'Maga da Tempestade', cost: 5, icon: '⚡', type: 'troop', count: 1, hp: 340, damage: 130, atkSpeed: 1.4, speed: 2.0, range: 5.5, isAir: false, targetAir: true, targetBuildingOnly: false, radius: 0.3, aoe: true, aoeRadius: 1.5 },
+    dragao: { id: 'dragao', name: 'Dragão Celestial', cost: 4, icon: '🐲', type: 'troop', count: 1, hp: 800, damage: 100, atkSpeed: 1.5, speed: 3.0, range: 3.5, isAir: true, targetAir: true, targetBuildingOnly: false, radius: 0.5, aoe: true, aoeRadius: 1.5 },
+    orbe: { id: 'orbe', name: 'Orbe de Descarga', cost: 2, icon: '🌩️', type: 'spell', radius: 2.5, damage: 159, crownDmg: 48, stun: 0.5 },
+    meteoro: { id: 'meteoro', name: 'Meteoro de Fogo', cost: 4, icon: '🔥', type: 'spell', radius: 2.5, damage: 320, crownDmg: 96, knockback: 1.5 },
+    canhao: { id: 'canhao', name: 'Canhão Mágico', cost: 3, icon: '🧱', type: 'building', hp: 450, damage: 60, atkSpeed: 0.8, range: 5.5, lifetime: 30, targetAir: false, radius: 1.0 },
+    santuario: { id: 'santuario', name: 'Santuário dos Espectros', cost: 3, icon: '🪦', type: 'building', hp: 300, spawnCard: 'espectros', spawnRate: 3.1, deathSpawn: 4, lifetime: 30, radius: 1.0 }
+};
+
+// --- Game State ---
+let canvas, ctx;
+let cw, ch, cellSize;
+let lastTime = 0;
+let gameTime = 180; // 3 minutes
+let isOvertime = false;
+let isGameOver = false;
+let globalTime = 0;
+
+let elixir = 5;
+let elixirRate = 1 / 2.8;
+
+let entities = [];
+let projectiles = [];
+let effects = []; // visuals
+
+// Deck
+let deck = Object.keys(CARDS_DB);
+let hand = [];
+let nextCard = null;
+let selectedCardIdx = -1;
+
+// --- Helper Math ---
+function dist(a, b) { return Math.hypot(b.x - a.x, b.y - a.y); }
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+// --- Classes ---
+class Entity {
+    constructor(x, y, team) {
+        this.id = Math.random().toString(36).substr(2, 9);
+        this.x = x;
+        this.y = y;
+        this.animTime = Math.random() * 10;
+        this.isMoving = false;
+        this.attackAnimTimer = 0;
+        this.team = team; // 1 = player, 2 = enemy
+        this.hp = 100;
+        this.maxHp = 100;
+        this.radius = 0.5;
+        this.isDead = false;
+        
+        this.target = null;
+        this.attackCooldown = 0;
+        this.stunTimer = 0;
+        
+        // Render
+        this.icon = '❓';
+    }
+
+    damage(amt) {
+        if (this.isDead) return;
+        this.hp -= amt;
+        if (this.hp <= 0) {
+            this.hp = 0;
+            this.die();
+        }
+        // Spawn damage text
+        spawnFloatText(`-${Math.floor(amt)}`, this.x, this.y, '#ff4444');
+    }
+
+    heal(amt) {
+        this.hp = Math.min(this.maxHp, this.hp + amt);
+    }
+
+    die() {
+        this.isDead = true;
+    }
+
+    update(dt) {}
+    draw(ctx) {}
+}
+
+class Tower extends Entity {
+    constructor(x, y, team, isNexus) {
+        super(x, y, team);
+        this.isNexus = isNexus;
+        this.maxHp = isNexus ? 4000 : 2534;
+        this.hp = this.maxHp;
+        this.damageAmt = isNexus ? 100 : 90;
+        this.attackSpeed = isNexus ? 1.0 : 0.8;
+        this.attackRange = isNexus ? 7.0 : 7.5;
+        this.radius = isNexus ? 1.5 : 1.2;
+        this.icon = isNexus ? '🏰' : '🗼';
+        this.isBuilding = true;
+        this.active = !isNexus; // Nexus inactive until hit or princess dies
+    }
+
+    damage(amt) {
+        super.damage(amt);
+        if (this.isNexus && !this.active) this.active = true;
+    }
+
+    die() {
+        super.die();
+        // If princess dies, activate nexus
+        if (!this.isNexus) {
+            entities.forEach(e => {
+                if (e instanceof Tower && e.team === this.team && e.isNexus) {
+                    e.active = true;
+                }
+            });
+        } else {
+            // Nexus destroyed = Game Over
+            endGame(this.team === 1 ? 'lose' : 'win');
+        }
+    }
+
+    update(dt) {
+        if (!this.active || this.isDead) return;
+        if (this.stunTimer > 0) { this.stunTimer -= dt; return; }
+
+        if (this.attackCooldown > 0) this.attackCooldown -= dt;
+
+        if (!this.target || this.target.isDead || dist(this, this.target) > this.attackRange) {
+            this.target = findTarget(this, this.attackRange, true);
+        }
+
+        if (this.target && this.attackCooldown <= 0) {
+            // Shoot projectile
+            projectiles.push(new Projectile(this.x, this.y, this.target, this.damageAmt, false, 0));
+            this.attackCooldown = this.attackSpeed;
+        }
+    }
+
+    draw(ctx) {
+        let px = this.x * cellSize;
+        let py = this.y * cellSize;
+        let r = this.radius * cellSize;
+        
+        // Tower Base (Shadow/Side)
+        ctx.fillStyle = '#475569'; // Darker stone
+        ctx.fillRect(px - r, py - r + r*0.5, r*2, r*1.5);
+        
+        // Tower Top Platform
+        ctx.fillStyle = '#94a3b8'; // Lighter stone
+        ctx.fillRect(px - r, py - r - r*0.5, r*2, r*2);
+        
+        // Team color banner
+        ctx.fillStyle = this.team === 1 ? '#1d4ed8' : '#b91c1c';
+        ctx.fillRect(px - r*0.6, py - r + r*0.5, r*1.2, r*1.2);
+        // Banner detail
+        ctx.fillStyle = '#fde047';
+        ctx.fillRect(px - r*0.6, py - r + r*1.4, r*1.2, r*0.3);
+        
+        // Roof/Crown
+        ctx.fillStyle = this.team === 1 ? '#3b82f6' : '#ef4444';
+        ctx.fillRect(px - r*1.1, py - r - r*0.8, r*2.2, r*0.6);
+        ctx.fillRect(px - r*0.8, py - r - r*1.2, r*1.6, r*0.6); 
+        
+        // Crown highlights
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillRect(px - r*1.1, py - r - r*0.8, r*2.2, r*0.2);
+
+        // Icon on top
+        // Animation for attack
+        let iconScale = 1;
+        let iconY = py - r*0.2;
+        if (this.attackCooldown > this.attackSpeed - 0.2) {
+            iconScale = 1.2;
+            iconY -= r*0.2;
+        }
+        
+        ctx.save();
+        ctx.translate(px, iconY);
+        ctx.scale(iconScale, iconScale);
+        ctx.font = `${r*1.4}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(this.icon, 0, 0);
+        ctx.restore();
+
+        // HP
+        drawHpBar(ctx, px, py - r - 22, this.hp, this.maxHp, this.isNexus ? 9 : 7);
+    }
+}
+
+class Troop extends Entity {
+    constructor(x, y, team, card) {
+        super(x, y, team);
+        this.card = card;
+        this.maxHp = card.hp;
+        this.hp = this.maxHp;
+        this.damageAmt = card.damage;
+        this.attackSpeed = card.atkSpeed;
+        this.moveSpeed = card.speed;
+        this.attackRange = card.range;
+        this.isAir = card.isAir;
+        this.targetAir = card.targetAir;
+        this.targetBuildingOnly = card.targetBuildingOnly;
+        this.radius = card.radius;
+        this.icon = card.icon;
+        this.aoe = card.aoe;
+        this.aoeRadius = card.aoeRadius || 0;
+        
+        this.deployTimer = 1.0;
+        this.sightRange = this.attackRange + 5.5;
+    }
+
+    update(dt) {
+        if (this.isDead) return;
+        this.animTime += dt;
+        if (this.attackAnimTimer > 0) this.attackAnimTimer -= dt;
+        this.isMoving = false;
+
+        if (this.deployTimer > 0) { this.deployTimer -= dt; return; }
+        if (this.stunTimer > 0) { this.stunTimer -= dt; return; }
+
+        if (this.attackCooldown > 0) this.attackCooldown -= dt;
+
+        // Retargeting
+        if (!this.target || this.target.isDead || dist(this, this.target) > this.sightRange) {
+            this.target = findTarget(this, this.sightRange, this.targetAir, this.targetBuildingOnly);
+        } else if (this.targetBuildingOnly && !this.target.isBuilding) {
+            this.target = findTarget(this, this.sightRange, this.targetAir, true);
+        }
+
+        if (!this.target) {
+            // Move towards enemy base if no target in sight
+            let tx = this.x;
+            let ty = this.team === 1 ? 0 : ROWS;
+            this.moveTowards(tx, ty, dt);
+            return;
+        }
+
+        let d = dist(this, this.target);
+        if (d <= this.attackRange + this.target.radius) {
+            // Attack
+            if (this.attackCooldown <= 0) {
+                this.attackAnimTimer = 0.2; // 0.2s attack anim
+                if (this.attackRange > 1.5) {
+                    projectiles.push(new Projectile(this.x, this.y, this.target, this.damageAmt, this.aoe, this.aoeRadius));
+                } else {
+                    if (this.aoe) {
+                        applyAoE(this.x, this.y, this.aoeRadius, this.damageAmt, this.team, this.targetAir);
+                    } else {
+                        this.target.damage(this.damageAmt);
+                    }
+                }
+                this.attackCooldown = this.attackSpeed;
+            }
+        } else {
+            // Move towards target
+            this.moveTowardsTarget(dt);
+            this.isMoving = true;
+        }
+    }
+
+    moveTowardsTarget(dt) {
+        let tx = this.target.x;
+        let ty = this.target.y;
+
+        // Pathfinding around river for ground troops
+        if (!this.isAir) {
+            let mySide = this.y > RIVER_Y;
+            let tSide = ty > RIVER_Y;
+            if (mySide !== tSide) {
+                // Must cross bridge
+                let leftBridgeCenter = {x: BRIDGE_L_X + 0.5, y: RIVER_Y};
+                let rightBridgeCenter = {x: BRIDGE_R_X + 0.5, y: RIVER_Y};
+                
+                let distL = dist(this, leftBridgeCenter) + dist(leftBridgeCenter, this.target);
+                let distR = dist(this, rightBridgeCenter) + dist(rightBridgeCenter, this.target);
+                
+                let bridge = distL < distR ? leftBridgeCenter : rightBridgeCenter;
+                
+                // If we are not 'on' the bridge vertically yet
+                if (Math.abs(this.y - RIVER_Y) > 2) {
+                    tx = bridge.x;
+                    // Keep ty to just move towards bridge
+                    ty = bridge.y;
+                }
+            }
+        }
+
+        this.moveTowards(tx, ty, dt);
+    }
+
+    moveTowards(tx, ty, dt) {
+        let angle = Math.atan2(ty - this.y, tx - this.x);
+        let moveDist = this.moveSpeed * dt;
+        
+        let newX = this.x + Math.cos(angle) * moveDist;
+        let newY = this.y + Math.sin(angle) * moveDist;
+
+        // River boundary collision for ground
+        if (!this.isAir) {
+            let onBridgeX = (newX >= BRIDGE_L_X && newX <= BRIDGE_L_X+1) || 
+                            (newX >= BRIDGE_R_X && newX <= BRIDGE_R_X+1);
+            if (!onBridgeX && newY > RIVER_Y - 1 && newY < RIVER_Y + 1) {
+                // Slide along river
+                newY = this.y;
+            }
+        }
+
+        this.x = clamp(newX, 0, COLS);
+        this.y = clamp(newY, 0, ROWS);
+    }
+
+    draw(ctx) {
+        let px = this.x * cellSize;
+        let py = this.y * cellSize;
+        let r = this.radius * cellSize;
+        
+        if (this.deployTimer > 0) ctx.globalAlpha = 0.5;
+        
+        // Shadow for air
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        if (this.isAir) {
+            ctx.beginPath(); ctx.ellipse(px, py + r*1.5, r, r/2, 0, 0, Math.PI*2); ctx.fill();
+            py -= r*1.5; // elevate visually
+        } else {
+            ctx.beginPath(); ctx.ellipse(px, py + r*0.5, r, r/2, 0, 0, Math.PI*2); ctx.fill();
+        }
+
+        ctx.fillStyle = this.team === 1 ? 'rgba(59, 130, 246, 0.5)' : 'rgba(239, 68, 68, 0.5)';
+        ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI*2); ctx.fill();
+
+        ctx.font = `${r*1.5}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(this.icon, px, py);
+
+        ctx.globalAlpha = 1.0;
+        if (this.hp < this.maxHp && this.deployTimer <= 0) {
+            drawHpBar(ctx, px, py - r - 5, this.hp, this.maxHp);
+        }
+    }
+}
+
+class Building extends Entity {
+    constructor(x, y, team, card) {
+        super(x, y, team);
+        this.card = card;
+        this.maxHp = card.hp;
+        this.hp = this.maxHp;
+        this.radius = card.radius;
+        this.icon = card.icon;
+        this.lifetime = card.lifetime;
+        this.lifeTimer = card.lifetime;
+        this.isBuilding = true;
+        
+        this.deployTimer = 1.0;
+
+        if (card.spawnCard) {
+            this.spawnTimer = card.spawnRate;
+        } else {
+            this.damageAmt = card.damage;
+            this.attackSpeed = card.atkSpeed;
+            this.attackRange = card.range;
+            this.targetAir = card.targetAir;
+        }
+    }
+
+    update(dt) {
+        if (this.isDead) return;
+        if (this.deployTimer > 0) { this.deployTimer -= dt; return; }
+
+        // Lifetime decay
+        this.lifeTimer -= dt;
+        this.hp = (this.lifeTimer / this.lifetime) * this.maxHp;
+        if (this.lifeTimer <= 0) {
+            this.die();
+            return;
+        }
+
+        if (this.stunTimer > 0) { this.stunTimer -= dt; return; }
+
+        if (this.card.spawnCard) {
+            // Spawner
+            this.spawnTimer -= dt;
+            if (this.spawnTimer <= 0) {
+                spawnUnit(this.card.spawnCard, this.x, this.y + (this.team===1?-1:1), this.team, 1);
+                this.spawnTimer = this.card.spawnRate;
+            }
+        } else {
+            // Cannon
+            if (this.attackCooldown > 0) this.attackCooldown -= dt;
+            if (!this.target || this.target.isDead || dist(this, this.target) > this.attackRange) {
+                this.target = findTarget(this, this.attackRange, this.targetAir, false);
+            }
+            if (this.target && this.attackCooldown <= 0) {
+                projectiles.push(new Projectile(this.x, this.y, this.target, this.damageAmt, false, 0));
+                this.attackCooldown = this.attackSpeed;
+            }
+        }
+    }
+
+    die() {
+        super.die();
+        if (this.card.deathSpawn) {
+            spawnUnit(this.card.spawnCard, this.x, this.y, this.team, this.card.deathSpawn);
+        }
+    }
+
+    draw(ctx) {
+        let px = this.x * cellSize;
+        let py = this.y * cellSize;
+        let r = this.radius * cellSize;
+        
+        if (this.deployTimer > 0) ctx.globalAlpha = 0.5;
+
+        ctx.fillStyle = this.team === 1 ? '#3b82f6' : '#ef4444';
+        ctx.fillRect(px - r, py - r, r*2, r*2);
+        
+        ctx.font = `${r*1.5}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(this.icon, px, py);
+
+        ctx.globalAlpha = 1.0;
+        drawHpBar(ctx, px, py - r - 5, this.hp, this.maxHp);
+    }
+}
+
+class Projectile {
+    constructor(x, y, target, damage, aoe, aoeRadius) {
+        this.x = x;
+        this.y = y;
+        this.target = target;
+        this.damageAmt = damage;
+        this.aoe = aoe;
+        this.aoeRadius = aoeRadius;
+        this.speed = 10.0;
+        this.isDead = false;
+        this.team = target.team === 1 ? 2 : 1; // Projectile belongs to opposite of target
+    }
+
+    update(dt) {
+        if (this.isDead) return;
+        if (this.target.isDead && !this.aoe) {
+            this.isDead = true; return;
+        }
+
+        // Move
+        let tx = this.target.x;
+        let ty = this.target.y;
+        let d = dist(this, this.target);
+        
+        if (d < 0.5) {
+            // Hit
+            if (this.aoe) {
+                applyAoE(this.x, this.y, this.aoeRadius, this.damageAmt, this.team, true);
+            } else {
+                this.target.damage(this.damageAmt);
+            }
+            this.isDead = true;
+        } else {
+            let angle = Math.atan2(ty - this.y, tx - this.x);
+            this.x += Math.cos(angle) * this.speed * dt;
+            this.y += Math.sin(angle) * this.speed * dt;
+        }
+    }
+
+    draw(ctx) {
+        let px = this.x * cellSize;
+        let py = this.y * cellSize;
+        ctx.fillStyle = '#fde047';
+        ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI*2); ctx.fill();
+    }
+}
+
+// --- Systems ---
+
+function initGame() {
+    canvas = document.getElementById('gameCanvas');
+    ctx = canvas.getContext('2d');
+    
+    // Setup Deck
+    shuffle(deck);
+    hand = deck.splice(0, 4);
+    nextCard = deck.shift();
+    renderHand();
+
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Bind Interaction
+    canvas.addEventListener('pointerdown', handleBoardClick);
+
+    // Setup Map Entities
+    // Player
+    entities.push(new Tower(3.5, 26, 1, false)); // L Princess
+    entities.push(new Tower(14.5, 26, 1, false)); // R Princess
+    entities.push(new Tower(9, 30.5, 1, true)); // King
+
+    // Enemy
+    entities.push(new Tower(3.5, 6, 2, false)); // L Princess
+    entities.push(new Tower(14.5, 6, 2, false)); // R Princess
+    entities.push(new Tower(9, 1.5, 2, true)); // King
+
+    lastTime = performance.now();
+    requestAnimationFrame(loop);
+}
+
+function resize() {
+    let wrapper = document.getElementById('canvas-wrapper');
+    cw = wrapper.clientWidth;
+    ch = wrapper.clientHeight;
+    canvas.width = cw;
+    canvas.height = ch;
+    
+    // We want the grid to fit or cover? Usually fit height.
+    cellSize = Math.min(cw / COLS, ch / ROWS);
+}
+
+function handleBoardClick(e) {
+    if (isGameOver || selectedCardIdx < 0) return;
+    
+    let rect = canvas.getBoundingClientRect();
+    // Center the board horizontally if cellsize * COLS < cw
+    let offsetX = (cw - COLS * cellSize) / 2;
+    let offsetY = (ch - ROWS * cellSize) / 2;
+
+    let cx = (e.clientX - rect.left - offsetX) / cellSize;
+    let cy = (e.clientY - rect.top - offsetY) / cellSize;
+
+    if (cx < 0 || cx > COLS || cy < 0 || cy > ROWS) return;
+
+    let cardId = hand[selectedCardIdx];
+    let card = CARDS_DB[cardId];
+
+    // Validate placement
+    // 1. Must be on player side (y >= 16) unless spell
+    if (card.type !== 'spell' && cy < 16) return;
+    // 2. Must have elixir
+    if (elixir < card.cost) {
+        showWarning("Elixir Insuficiente!");
+        return;
+    }
+
+    // Deploy
+    elixir -= card.cost;
+    playCard(card, cx, cy, 1);
+
+    // Cycle
+    deck.push(hand[selectedCardIdx]);
+    hand[selectedCardIdx] = nextCard;
+    nextCard = deck.shift();
+    selectedCardIdx = -1;
+    renderHand();
+}
+
+function playCard(card, x, y, team) {
+    if (card.type === 'spell') {
+        effects.push({ x, y, radius: card.radius, time: 0.5, type: card.id });
+        
+        entities.forEach(e => {
+            if (e.team !== team && dist(e, {x, y}) <= card.radius) {
+                let dmg = e.isBuilding ? card.crownDmg : card.damage;
+                e.damage(dmg);
+                if (card.stun) e.stunTimer = card.stun;
+                if (card.knockback && !e.isBuilding) {
+                    let angle = Math.atan2(e.y - y, e.x - x);
+                    e.x += Math.cos(angle) * card.knockback;
+                    e.y += Math.sin(angle) * card.knockback;
+                }
+            }
+        });
+    } else if (card.type === 'building') {
+        entities.push(new Building(x, y, team, card));
+    } else {
+        spawnUnit(card.id, x, y, team, card.count);
+    }
+}
+
+function spawnUnit(cardId, x, y, team, count) {
+    let card = CARDS_DB[cardId];
+    if (count === 1) {
+        entities.push(new Troop(x, y, team, card));
+    } else {
+        // Spawn around center
+        let offsets = [[0,0], [-0.5, 0.5], [0.5, 0.5], [-0.5, -0.5], [0.5, -0.5]];
+        for(let i=0; i<count; i++) {
+            let ox = offsets[i%offsets.length][0];
+            let oy = offsets[i%offsets.length][1];
+            entities.push(new Troop(x + ox, y + oy, team, card));
+        }
+    }
+}
+
+function findTarget(source, range, canTargetAir, buildingOnly) {
+    let bestDist = Infinity;
+    let best = null;
+    for (let e of entities) {
+        if (e.team !== source.team && !e.isDead) {
+            if (e.isAir && !canTargetAir) continue;
+            if (buildingOnly && !e.isBuilding) continue;
+            
+            let d = dist(source, e);
+            if (d < bestDist && d <= range) {
+                bestDist = d;
+                best = e;
+            }
+        }
+    }
+    return best;
+}
+
+function applyAoE(x, y, radius, damage, team, targetAir) {
+    entities.forEach(e => {
+        if (e.team !== team && !e.isDead) {
+            if (e.isAir && !targetAir) return;
+            if (dist({x,y}, e) <= radius) {
+                e.damage(damage);
+            }
+        }
+    });
+}
+
+function pushPhysics() {
+    // Simple collision resolution between ground units
+    let groundUnits = entities.filter(e => !e.isAir && !e.isBuilding && !e.isDead);
+    for (let i = 0; i < groundUnits.length; i++) {
+        for (let j = i + 1; j < groundUnits.length; j++) {
+            let a = groundUnits[i];
+            let b = groundUnits[j];
+            let dx = b.x - a.x;
+            let dy = b.y - a.y;
+            let d = Math.hypot(dx, dy);
+            let minDist = a.radius + b.radius;
+            if (d < minDist && d > 0.001) {
+                let overlap = minDist - d;
+                let nx = dx / d;
+                let ny = dy / d;
+                // Push apart
+                a.x -= nx * overlap * 0.5;
+                a.y -= ny * overlap * 0.5;
+                b.x += nx * overlap * 0.5;
+                b.y += ny * overlap * 0.5;
+            }
+        }
+    }
+}
+
+function loop(time) {
+    let dt = (time - lastTime) / 1000;
+    lastTime = time;
+    if (dt > 0.1) dt = 0.1;
+
+    if (!isGameOver) {
+        update(dt);
+    }
+    draw();
+    
+    requestAnimationFrame(loop);
+}
+
+// Enemy Bot logic
+let botTimer = 0;
+function updateBot(dt) {
+    botTimer += dt;
+    if (botTimer > 3.0) {
+        botTimer = 0;
+        // Basic AI: Try to spawn something if we have 5+ elixir
+        let rCard = CARDS_DB[Object.keys(CARDS_DB)[Math.floor(Math.random()*8)]];
+        if (Math.random() > 0.5) {
+            let ex = Math.random() > 0.5 ? 4 : 14;
+            let ey = 6 + Math.random() * 4;
+            playCard(rCard, ex, ey, 2);
+        }
+    }
+}
+
+function update(dt) {
+    // Time & Elixir
+    gameTime -= dt;
+globalTime += dt;
+    if (gameTime <= 0 && !isOvertime) {
+        // Check scores
+        let pTowers = entities.filter(e => e.team === 1 && e instanceof Tower).length;
+        let eTowers = entities.filter(e => e.team === 2 && e instanceof Tower).length;
+        if (pTowers === eTowers) {
+            isOvertime = true;
+            gameTime = 120; // 2 min sudden death
+        } else {
+            endGame(pTowers > eTowers ? 'win' : 'lose');
+            return;
+        }
+    }
+    
+    if (isOvertime && gameTime <= 0) {
+        endGame('draw');
+        return;
+    }
+
+    // Elixir rate changes
+    if (isOvertime) {
+        elixirRate = 1 / 0.9;
+    } else if (gameTime <= 60) {
+        elixirRate = 1 / 1.4;
+    } else {
+        elixirRate = 1 / 2.8;
+    }
+
+    elixir = clamp(elixir + elixirRate * dt, 0, 10);
+    
+    updateUI();
+    updateBot(dt);
+
+    // Entities
+    entities.forEach(e => e.update(dt));
+    projectiles.forEach(p => p.update(dt));
+    
+    // Physics
+    pushPhysics();
+
+    // Cleanup
+    entities = entities.filter(e => !e.isDead);
+    projectiles = projectiles.filter(p => !p.isDead);
+    effects.forEach(ef => ef.time -= dt);
+    effects = effects.filter(ef => ef.time > 0);
+}
+
+function draw() {
+    let offsetX = (cw - COLS * cellSize) / 2;
+    let offsetY = (ch - ROWS * cellSize) / 2;
+
+    ctx.save();
+    
+    // Fill background bounds
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fillRect(0, 0, cw, ch);
+    
+    ctx.translate(offsetX, offsetY);
+
+    // Grass Background
+    ctx.fillStyle = '#166534';
+    ctx.fillRect(0, 0, COLS * cellSize, ROWS * cellSize);
+    
+    ctx.fillStyle = '#15803d'; // Darker green pattern
+    for(let i=0; i<COLS; i++) {
+        for(let j=0; j<ROWS; j++) {
+            if ((i+j)%2 === 0) {
+                ctx.fillRect(i*cellSize, j*cellSize, cellSize, cellSize);
+            }
+        }
+    }
+
+    // Paths (Dirt)
+    ctx.fillStyle = '#b45309'; // Dirt color
+    let pWidth = 3 * cellSize;
+    
+    // Left path
+    ctx.fillRect(2.5 * cellSize, 6 * cellSize, pWidth, 20 * cellSize);
+    // Right path
+    ctx.fillRect(12.5 * cellSize, 6 * cellSize, pWidth, 20 * cellSize);
+    // King to Princess
+    ctx.fillRect(4 * cellSize, 25.5 * cellSize, 10 * cellSize, pWidth); // Player
+    ctx.fillRect(4 * cellSize, 3.5 * cellSize, 10 * cellSize, pWidth); // Enemy
+
+    // River flow animation
+    let rTime = globalTime;
+    
+    // Draw River Bank
+    ctx.fillStyle = '#7e22ce'; // Dark magenta bank
+    ctx.fillRect(0, 14.8*cellSize, COLS*cellSize, 2.9*cellSize);
+    
+    // Draw River
+    ctx.fillStyle = '#d946ef'; // Magenta Arcane River
+    ctx.fillRect(0, 15*cellSize, COLS*cellSize, 2.5*cellSize);
+    
+    // River glow/detail
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.fillRect(0, 15.2*cellSize + Math.sin(rTime*2)*0.1*cellSize, COLS*cellSize, 0.15*cellSize);
+    ctx.fillRect(0, 17.1*cellSize + Math.cos(rTime*2.5)*0.1*cellSize, COLS*cellSize, 0.1*cellSize);
+    
+    for(let i=0; i<COLS; i++) {
+        let px = ((rTime * 1.5 + i) % COLS) * cellSize;
+        ctx.fillRect(px, 15.8*cellSize + Math.sin(rTime*3 + i)*0.2*cellSize, 0.3*cellSize, 0.1*cellSize);
+    }
+
+    // Draw Bridges
+    let bw = 2.5 * cellSize;
+    let bh = 3.5 * cellSize;
+    let by = 14.5 * cellSize;
+    
+    // Left Bridge
+    ctx.fillStyle = '#451a03'; // Dark wood edge
+    ctx.fillRect(2.65 * cellSize, by, bw + 0.2*cellSize, bh);
+    ctx.fillStyle = '#78350f'; // Wood bridge
+    ctx.fillRect(2.75 * cellSize, by, bw, bh);
+    ctx.fillStyle = '#92400e'; // planks
+    for(let i=0; i<5; i++) ctx.fillRect(2.75*cellSize, by + i*(bh/5), bw, bh/5 - 1);
+    
+    // Right Bridge
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(12.65 * cellSize, by, bw + 0.2*cellSize, bh);
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(12.75 * cellSize, by, bw, bh);
+    ctx.fillStyle = '#92400e';
+    for(let i=0; i<5; i++) ctx.fillRect(12.75*cellSize, by + i*(bh/5), bw, bh/5 - 1);
+
+    // Sort by Y for fake depth
+    entities.sort((a,b) => a.y - b.y);
+
+    entities.forEach(e => e.draw(ctx));
+    projectiles.forEach(p => p.draw(ctx));
+
+    // Draw effects
+    effects.forEach(ef => {
+        let px = ef.x * cellSize;
+        let py = ef.y * cellSize;
+        let r = ef.radius * cellSize;
+        ctx.fillStyle = ef.type === 'meteoro' ? 'rgba(255, 100, 0, 0.4)' : 'rgba(0, 200, 255, 0.4)';
+        ctx.beginPath(); ctx.arc(px, py, r * (0.5/ef.time), 0, Math.PI*2); ctx.fill();
+    });
+
+    ctx.restore();
+}
+
+// --- UI Helpers ---
+function drawHpBar(ctx, x, y, hp, maxHp, level=null) {
+    let w = 36;
+    let h = 8;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(x - w/2, y, w, h);
+    
+    let isPlayer = (y > ROWS/2 * cellSize);
+    ctx.fillStyle = isPlayer ? '#3b82f6' : '#ef4444';
+    
+    let hpRatio = Math.max(0, hp/maxHp);
+    ctx.fillRect(x - w/2 + 1, y + 1, (w - 2) * hpRatio, h - 2);
+    
+    // HP text
+    if (level !== null) {
+        ctx.font = '900 11px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = 'black';
+        ctx.strokeText(Math.floor(hp), x + 6, y - 8);
+        ctx.fillStyle = 'white';
+        ctx.fillText(Math.floor(hp), x + 6, y - 8);
+    }
+    
+    // Level badge
+    if (level !== null) {
+        let bx = x - w/2 - 6;
+        let by = y + h/2;
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.arc(bx, by, 8, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = isPlayer ? '#2563eb' : '#dc2626';
+        ctx.beginPath(); ctx.arc(bx, by, 7, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 9px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(level, bx, by + 1);
+    }
+}
+
+function updateUI() {
+    document.getElementById('elixir-fill').style.width = `${(elixir/10)*100}%`;
+    document.getElementById('elixir-text-num').innerText = Math.floor(elixir);
+
+    let m = Math.floor(gameTime / 60);
+    let s = Math.floor(gameTime % 60).toString().padStart(2, '0');
+    let timerEl = document.getElementById('timer');
+    timerEl.innerText = `${m}:${s}`;
+    if (isOvertime) timerEl.style.color = '#f87171';
+    
+    // Update card opacities based on cost
+    const slots = document.querySelectorAll('.card-slot');
+    slots.forEach((slot, i) => {
+        if(hand[i]) {
+            if (elixir >= CARDS_DB[hand[i]].cost) slot.classList.remove('disabled');
+            else slot.classList.add('disabled');
+        }
+    });
+}
+
+function renderHand() {
+    let container = document.getElementById('hand-slots');
+    container.innerHTML = '';
+    hand.forEach((cardId, i) => {
+        let card = CARDS_DB[cardId];
+        let el = document.createElement('div');
+        el.className = `card-slot ${selectedCardIdx === i ? 'selected' : ''}`;
+        el.innerHTML = `
+            <div class="card-cost">${card.cost}</div>
+            <div class="card-icon">${card.icon}</div>
+        `;
+        el.onclick = () => {
+            if (elixir < card.cost) return;
+            selectedCardIdx = selectedCardIdx === i ? -1 : i;
+            renderHand(); // re-render to update selected visual
+        };
+        container.appendChild(el);
+    });
+
+    let next = CARDS_DB[nextCard];
+    document.getElementById('next-icon').innerText = next.icon;
+}
+
+function spawnFloatText(text, x, y, color) {
+    let el = document.createElement('div');
+    el.className = 'float-text';
+    el.innerText = text;
+    el.style.color = color;
+    
+    let rect = canvas.getBoundingClientRect();
+    let offsetX = (cw - COLS * cellSize) / 2;
+    let offsetY = (ch - ROWS * cellSize) / 2;
+    
+    el.style.left = `${rect.left + offsetX + x * cellSize}px`;
+    el.style.top = `${rect.top + offsetY + y * cellSize}px`;
+    document.body.appendChild(el);
+    
+    setTimeout(() => el.remove(), 1000);
+}
+
+function showWarning(text) {
+    spawnFloatText(text, COLS/2, ROWS/2 + 2, '#ef4444');
+}
+
+function endGame(result) {
+    isGameOver = true;
+    let go = document.getElementById('game-over');
+    let title = document.getElementById('go-title');
+    go.style.display = 'flex';
+    if (result === 'win') { title.innerText = 'VITÓRIA!'; title.className = 'win'; }
+    else if (result === 'lose') { title.innerText = 'DERROTA!'; title.className = 'lose'; }
+    else { title.innerText = 'EMPATE'; title.className = 'draw'; }
+}
+
+function shuffle(arr) {
+    for(let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+}
+
+// Start
+initGame();
+
+</script>
+</body>
+</html>

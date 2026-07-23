@@ -1,0 +1,2410 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aether Royale</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <style>
+        
+        :root {
+            --primary: #3b82f6;
+            --secondary: #a855f7;
+            --elixir: #d946ef;
+            --enemy: #ef4444;
+            --bg: #1e1e24;
+            --wood-dark: #3e2723;
+            --wood-light: #5d4037;
+            --wood-panel: #8d6e63;
+        }
+        * { box-sizing: border-box; font-family: 'Outfit', sans-serif; user-select: none; -webkit-user-select: none; }
+        body {
+            margin: 0; padding: 0;
+            background: var(--bg);
+            color: white;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            touch-action: none;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: #2a2a2a;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        #canvas-wrapper {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #2a2a2a;
+            overflow: hidden;
+            z-index: 1;
+        }
+        
+        #header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 10px 15px;
+            position: absolute;
+            top: 10px; left: 10px; right: 10px;
+            z-index: 20;
+            pointer-events: none;
+        }
+        
+        #player-towers-hud {
+            display: flex;
+            gap: 4px;
+            margin-top: 10px;
+            pointer-events: auto;
+        }
+        .tower-hud {
+            background: rgba(15, 23, 42, 0.85);
+            border: 2px solid #3b82f6;
+            border-radius: 6px;
+            padding: 2px 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            backdrop-filter: blur(4px);
+        }
+        .tower-hud.king {
+            border-color: #fde047;
+            transform: scale(1.1);
+            margin: 0 4px;
+        }
+        .tower-icon {
+            font-size: 0.8rem;
+            filter: drop-shadow(0 1px 1px black);
+        }
+        .tower-hp-bar {
+            width: 25px;
+            height: 6px;
+            background: #000;
+            border-radius: 3px;
+            overflow: hidden;
+            border: 1px solid #333;
+        }
+        .tower-hp-fill {
+            height: 100%;
+            background: #3b82f6;
+            width: 100%;
+            transition: width 0.2s ease-out;
+        }
+        
+        #ui-layer {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 150px;
+            background: linear-gradient(180deg, rgba(93, 64, 55, 0.95), rgba(62, 39, 35, 1));
+            border-top: 3px solid #fde047;
+            display: flex;
+            flex-direction: column;
+            padding: 10px 5px 15px 5px;
+            z-index: 20;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.8);
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+        }
+
+        .btn-back {
+            background: var(--wood-light);
+            border: 2px solid var(--wood-dark);
+            color: white;
+            border-radius: 6px;
+            padding: 4px 10px;
+            cursor: pointer;
+            font-weight: 800;
+            pointer-events: auto;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            box-shadow: 0 4px 0 var(--wood-dark);
+        }
+        .btn-back:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 var(--wood-dark);
+        }
+
+        #timer-container {
+            background: rgba(15, 23, 42, 0.85);
+            border: 2px solid #3b82f6;
+            border-radius: 12px;
+            padding: 4px 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5), 0 0 10px rgba(59, 130, 246, 0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        #timer-label {
+            font-size: 0.55rem;
+            color: #ccc;
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-bottom: -2px;
+        }
+
+        #timer {
+            font-size: 1.1rem;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 1px 1px 0 #000;
+        }
+
+        #canvas-wrapper {
+            flex: 1;
+            position: relative;
+            background: #4ade80;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #ui-layer {
+            height: 150px;
+            background: linear-gradient(180deg, var(--wood-light), var(--wood-dark));
+            border-top: 4px solid #2e1a11;
+            display: flex;
+            flex-direction: column;
+            padding: 8px 5px 5px 5px;
+            z-index: 10;
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
+            position: relative;
+        }
+        
+        /* Wood texture overlay */
+        #ui-layer::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: repeating-linear-gradient(90deg, rgba(0,0,0,0.05) 0px, rgba(0,0,0,0.05) 2px, transparent 2px, transparent 4px);
+            pointer-events: none;
+        }
+
+        .cards-container {
+            display: flex;
+            gap: 8px;
+            padding: 0 5px;
+            flex: 1;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .card-slot {
+            flex: 1;
+            max-width: 70px;
+            aspect-ratio: 5/6;
+            background: linear-gradient(135deg, #cbd5e1, #94a3b8);
+            border: 3px solid #334155;
+            border-radius: 6px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s, filter 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.4), inset 0 0 10px rgba(255,255,255,0.5);
+        }
+        
+        .card-slot:active {
+            transform: scale(0.95);
+        }
+        
+        .card-slot:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.5), inset 0 0 10px rgba(255,255,255,0.6);
+            z-index: 10;
+        }
+        
+        @keyframes deployPulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(217, 70, 239, 0.7); }
+            50% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(217, 70, 239, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(217, 70, 239, 0); }
+        }
+        .deploying {
+            animation: deployPulse 0.3s ease-out;
+        }
+
+        .card-slot.selected {
+            transform: translateY(-10px);
+            border-color: #fde047;
+            box-shadow: 0 10px 10px rgba(0,0,0,0.5), inset 0 0 10px rgba(253, 224, 71, 0.5), 0 0 15px rgba(253, 224, 71, 0.6);
+        }
+
+        .card-slot.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            filter: grayscale(1) brightness(0.7);
+            transform: translateY(0);
+        }
+
+        .card-icon {
+            font-size: 2.2rem;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
+        }
+
+        .card-cost {
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(180deg, #f0abfc, #d946ef);
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 900;
+            border: 2px solid #4a044e;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.6);
+            text-shadow: 1px 1px 0 #000;
+            z-index: 5;
+        }
+        
+        .card-cost::before {
+            content: '';
+            position: absolute;
+            top: 2px; left: 4px; right: 4px; bottom: 8px;
+            background: rgba(255,255,255,0.4);
+            border-radius: 50%;
+        }
+
+        .next-card-wrapper {
+            display: flex;
+            align-items: center;
+            margin-left: 5px;
+            padding-left: 10px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .next-card-container {
+            width: 50px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .next-label {
+            font-size: 0.65rem;
+            color: #f8fafc;
+            text-transform: uppercase;
+            font-weight: 800;
+            margin-bottom: 2px;
+            text-shadow: 1px 1px 2px #000;
+        }
+
+        .next-slot {
+            width: 45px;
+            aspect-ratio: 5/6;
+            background: linear-gradient(135deg, #94a3b8, #64748b);
+            border: 2px solid #334155;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            position: relative;
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.5);
+        }
+
+        #elixir-container {
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            margin-top: 10px;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .elixir-drop-icon {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(180deg, #f0abfc, #d946ef);
+            border-radius: 50% 50% 50% 5%;
+            transform: rotate(-45deg);
+            border: 2px solid #4a044e;
+            box-shadow: inset 2px 2px 5px rgba(255,255,255,0.5), 0 2px 4px rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: -10px;
+            z-index: 3;
+            position: relative;
+        }
+        .elixir-drop-icon span {
+            transform: rotate(45deg);
+            font-weight: 900;
+            font-size: 0.9rem;
+            color: white;
+            text-shadow: 1px 1px 1px #000;
+        }
+
+        #elixir-bar-container {
+            flex: 1;
+            height: 22px;
+            background: #1e1e1e;
+            border-radius: 4px;
+            position: relative;
+            border: 2px solid #000;
+            overflow: hidden;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.8);
+            display: flex;
+        }
+        
+        /* Bar segments */
+        .elixir-segment {
+            flex: 1;
+            border-right: 1px solid rgba(0,0,0,0.5);
+            height: 100%;
+            z-index: 2;
+        }
+        .elixir-segment:last-child { border-right: none; }
+
+        #elixir-fill {
+            position: absolute;
+            top: 0; left: 0;
+            height: 100%;
+            background: linear-gradient(180deg, #f472b6, #d946ef, #a21caf);
+            width: 50%;
+            transition: width 0.15s ease-out;
+            z-index: 1;
+            box-shadow: inset 0 2px 5px rgba(255,255,255,0.6), 0 0 10px rgba(217, 70, 239, 0.5);
+        }
+
+        #game-over {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            backdrop-filter: blur(4px);
+        }
+        #game-over h1 { 
+            font-size: 3.5rem; 
+            margin: 0; 
+            text-transform: uppercase; 
+            font-weight: 900;
+            -webkit-text-stroke: 2px black;
+        }
+        .win { color: #4ade80; text-shadow: 0 5px 15px rgba(34, 197, 94, 0.6); }
+        .lose { color: #f87171; text-shadow: 0 5px 15px rgba(239, 68, 68, 0.6); }
+        .draw { color: #94a3b8; text-shadow: 0 5px 15px rgba(148, 163, 184, 0.6); }
+        
+        #btn-restart {
+            margin-top: 30px;
+            padding: 12px 30px;
+            font-size: 1.4rem;
+            background: linear-gradient(to bottom, #3b82f6, #1d4ed8);
+            color: white;
+            border: 2px solid #000;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 900;
+            text-transform: uppercase;
+            box-shadow: 0 4px 0 #1e3a8a, 0 8px 15px rgba(0,0,0,0.5);
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        #btn-restart:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #1e3a8a, 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        .float-text {
+            position: absolute;
+            pointer-events: none;
+            font-weight: 900;
+            font-size: 16px;
+            animation: floatUp 1s ease-out forwards;
+            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 4px rgba(0,0,0,0.8);
+            z-index: 5;
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-40px) scale(1.3); opacity: 0; }
+        }
+
+    
+        #hub-container {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 50px;
+            z-index: 100;
+            overflow-y: auto;
+        }
+        #hub-container h1 {
+            color: #fde047;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        #deck-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            width: 90%;
+            max-width: 450px;
+            margin-bottom: 30px;
+        }
+        .hub-card {
+            background: linear-gradient(135deg, #cbd5e1, #94a3b8);
+            border: 3px solid #334155;
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+            position: relative;
+        }
+        .hub-card.selected {
+            border-color: #3b82f6;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+        }
+        .hub-card .card-cost {
+            top: -5px; right: -5px;
+            bottom: auto; left: auto;
+            transform: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            z-index: 5;
+        }
+        .hub-card .card-icon {
+            font-size: 2.5rem;
+            margin-bottom: 5px;
+        }
+        .hub-card .card-name {
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: #1e293b;
+            text-align: center;
+            line-height: 1.1;
+        }
+        #start-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.2s;
+            margin-bottom: 40px;
+        }
+        #start-btn:disabled {
+            background: #475569;
+            color: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+        }
+        #start-btn:not(:disabled):hover {
+            background: #2563eb;
+            transform: scale(1.05);
+        }
+
+        #threeCanvas {
+            display: none;
+        }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+
+    <div id="hub-container">
+        <button class="btn-back" style="position:absolute; top:20px; left:20px;" onclick="window.location.href='index.html'">Voltar</button>
+        <h1>Aether Royale</h1>
+        <p style="margin-bottom: 20px; color: #cbd5e1;">Escolha 6 cartas para o seu deck (<span id="deck-count">0</span>/6)</p>
+        
+        <div id="deck-grid"></div>
+        
+        <button id="start-btn" disabled>Iniciar Batalha</button>
+    </div>
+    
+    <div id="game-container" style="display: none;">
+
+    <div id="header">
+        <div style="display:flex; flex-direction: column; align-items: flex-start; gap: 5px;">
+            <button class="btn-back" onclick="location.reload()">Sair</button>
+            <div id="player-towers-hud">
+                <div class="tower-hud">
+                    <span class="tower-icon">🏰</span>
+                    <div class="tower-hp-bar"><div id="hud-hp-l" class="tower-hp-fill"></div></div>
+                </div>
+                <div class="tower-hud king">
+                    <span class="tower-icon">👑</span>
+                    <div class="tower-hp-bar"><div id="hud-hp-k" class="tower-hp-fill"></div></div>
+                </div>
+                <div class="tower-hud">
+                    <span class="tower-icon">🏰</span>
+                    <div class="tower-hp-bar"><div id="hud-hp-r" class="tower-hp-fill"></div></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="timer-container">
+            <span id="timer-label">Tempo Final</span>
+            <div id="timer">3:00</div>
+        </div>
+        <div style="width: 120px"></div>
+    </div>
+    
+    <div id="canvas-wrapper">
+        <canvas id="gameCanvas"></canvas>
+        <canvas id="threeCanvas"></canvas>
+    </div>
+
+    <div id="ui-layer">
+        <div class="cards-container">
+            <div id="hand-slots" style="display:flex; flex:1; justify-content:center; gap:8px;">
+                <!-- Cards injected here -->
+            </div>
+            <div class="next-card-wrapper">
+                <div class="next-card-container">
+                    <span class="next-label">Próxima:</span>
+                    <div class="next-slot" id="next-slot">
+                        <span class="card-icon" id="next-icon">?</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="elixir-container">
+            <div class="elixir-drop-icon"><span id="elixir-text-num">5</span></div>
+            <div id="elixir-bar-container">
+                <div id="elixir-fill"></div>
+                <div class="elixir-segment"></div><div class="elixir-segment"></div><div class="elixir-segment"></div>
+                <div class="elixir-segment"></div><div class="elixir-segment"></div><div class="elixir-segment"></div>
+                <div class="elixir-segment"></div><div class="elixir-segment"></div><div class="elixir-segment"></div>
+                <div class="elixir-segment"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-over">
+        <h1 id="go-title">Vitória!</h1>
+        <button id="btn-restart" onclick="location.reload()">Jogar Novamente</button>
+    </div>
+</div>
+
+<script>
+/**
+ * AETHER ROYALE - ENGINE
+ */
+
+// --- Constants & Config ---
+const COLS = 18;
+const ROWS = 32;
+
+// The map is divided: 0 to 15 is Enemy, 16 to 31 is Player
+const RIVER_Y = 15.5; // Visual river area ~15 to 16
+const BRIDGE_L_X = 4; // Col 3 and 4
+const BRIDGE_R_X = 14; // Col 13 and 14
+
+const CARDS_DB = {
+    guardiao: { id: 'guardiao', name: 'Guardião de Ferro', cost: 3, icon: '🛡️', type: 'troop', count: 1, hp: 800, damage: 75, atkSpeed: 1.2, speed: 2.0, range: 0.8, isAir: false, targetAir: false, targetBuildingOnly: false, radius: 0.4, aoe: false },
+    espectros: { id: 'espectros', name: 'Horda de Espectros', cost: 1, icon: '💀', type: 'troop', count: 3, hp: 30, damage: 30, atkSpeed: 1.0, speed: 3.5, range: 0.6, isAir: false, targetAir: false, targetBuildingOnly: false, radius: 0.25, aoe: false },
+    golem: { id: 'golem', name: 'Golem de Pedras Arcanas', cost: 5, icon: '🪨', type: 'troop', count: 1, hp: 2000, damage: 120, atkSpeed: 1.5, speed: 1.5, range: 1.0, isAir: false, targetAir: false, targetBuildingOnly: true, radius: 0.6, aoe: false },
+    lorde: { id: 'lorde', name: 'Lorde do Machado', cost: 4, icon: '🪓', type: 'troop', count: 1, hp: 880, damage: 120, atkSpeed: 1.5, speed: 2.5, range: 1.2, isAir: false, targetAir: false, targetBuildingOnly: false, radius: 0.4, aoe: true, aoeRadius: 1.5 },
+    atiradoras: { id: 'atiradoras', name: 'Atiradoras da Floresta', cost: 3, icon: '🏹', type: 'troop', count: 2, hp: 120, damage: 40, atkSpeed: 1.2, speed: 2.0, range: 5.0, isAir: false, targetAir: true, targetBuildingOnly: false, radius: 0.3, aoe: false },
+    dracos: { id: 'dracos', name: 'Dracos Elementais', cost: 3, icon: '🦇', type: 'troop', count: 3, hp: 90, damage: 40, atkSpeed: 1.0, speed: 4.0, range: 2.0, isAir: true, targetAir: true, targetBuildingOnly: false, radius: 0.3, aoe: false },
+    maga: { id: 'maga', name: 'Maga da Tempestade', cost: 5, icon: '⚡', type: 'troop', count: 1, hp: 340, damage: 130, atkSpeed: 1.4, speed: 2.0, range: 5.5, isAir: false, targetAir: true, targetBuildingOnly: false, radius: 0.3, aoe: true, aoeRadius: 1.5 },
+    dragao: { id: 'dragao', name: 'Dragão Celestial', cost: 4, icon: '🐲', type: 'troop', count: 1, hp: 800, damage: 100, atkSpeed: 1.5, speed: 3.0, range: 3.5, isAir: true, targetAir: true, targetBuildingOnly: false, radius: 0.5, aoe: true, aoeRadius: 1.5 },
+    orbe: { id: 'orbe', name: 'Orbe de Descarga', cost: 2, icon: '🌩️', type: 'spell', radius: 2.5, damage: 159, crownDmg: 48, stun: 0.5 },
+    meteoro: { id: 'meteoro', name: 'Meteoro de Fogo', cost: 4, icon: '🔥', type: 'spell', radius: 2.5, damage: 320, crownDmg: 96, knockback: 1.5 },
+    canhao: { id: 'canhao', name: 'Canhão Mágico', cost: 3, icon: '🧱', type: 'building', hp: 450, damage: 60, atkSpeed: 0.8, range: 5.5, lifetime: 30, targetAir: false, radius: 1.0 },
+        santuario: { id: 'santuario', name: 'Santuário dos Espectros', cost: 4, icon: '🪦', type: 'building', hp: 250, spawnCard: 'espectros', spawnRate: 4.5, deathSpawn: 2, lifetime: 25, radius: 1.0 },
+    valquiria: { id: 'valquiria', name: 'Guerreira Giratória', cost: 4, icon: '🧝‍♀️', type: 'troop', count: 1, hp: 1200, damage: 110, atkSpeed: 1.4, speed: 2.5, range: 1.0, isAir: false, targetAir: false, targetBuildingOnly: false, radius: 0.5, aoe: true, aoeRadius: 1.5 },
+    corredor: { id: 'corredor', name: 'Montador de Javali', cost: 4, icon: '🐗', type: 'troop', count: 1, hp: 1000, damage: 150, atkSpeed: 1.5, speed: 4.5, range: 0.8, isAir: false, targetAir: false, targetBuildingOnly: true, radius: 0.4, aoe: false },
+    principe: { id: 'principe', name: 'Cavaleiro de Elite', cost: 5, icon: '🏇', type: 'troop', count: 1, hp: 1300, damage: 220, atkSpeed: 1.4, speed: 3.5, range: 1.0, isAir: false, targetAir: false, targetBuildingOnly: false, radius: 0.5, aoe: false },
+    xbesta: { id: 'xbesta', name: 'Besta de Cerco', cost: 6, icon: '🏹', type: 'building', hp: 800, damage: 25, atkSpeed: 0.3, range: 12.0, lifetime: 40, targetAir: false, radius: 1.2 },
+    relampago: { id: 'relampago', name: 'Relâmpago Sagrado', cost: 6, icon: '🌩️', type: 'spell', radius: 3.5, damage: 600, crownDmg: 200, stun: 1.0 },
+};
+
+
+// --- Audio System ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let soundEnabled = true;
+
+function playSound(type) {
+    if (!soundEnabled || audioCtx.state === 'suspended') return;
+    
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    const now = audioCtx.currentTime;
+    
+    if (type === 'spawn') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.1, now + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.3);
+    } else if (type === 'attack_melee') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(200, now);
+        osc.frequency.exponentialRampToValueAtTime(50, now + 0.1);
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.1, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+        osc.start(now);
+        osc.stop(now + 0.1);
+    } else if (type === 'attack_magic') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.linearRampToValueAtTime(1200, now + 0.1);
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.05, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+        osc.start(now);
+        osc.stop(now + 0.2);
+    } else if (type === 'spell') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(100, now);
+        osc.frequency.exponentialRampToValueAtTime(20, now + 0.4);
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.15, now + 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+        osc.start(now);
+        osc.stop(now + 0.5);
+    } else if (type === 'tower_hit') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(120, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.3);
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.4, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        
+        let noiseSize = audioCtx.sampleRate * 0.2;
+        let noiseBuf = audioCtx.createBuffer(1, noiseSize, audioCtx.sampleRate);
+        let output = noiseBuf.getChannelData(0);
+        for (let i = 0; i < noiseSize; i++) output[i] = Math.random() * 2 - 1;
+        
+        let whiteNoise = audioCtx.createBufferSource();
+        whiteNoise.buffer = noiseBuf;
+        let noiseFilter = audioCtx.createBiquadFilter();
+        noiseFilter.type = 'lowpass';
+        noiseFilter.frequency.value = 600;
+        let noiseGain = audioCtx.createGain();
+        whiteNoise.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(audioCtx.destination);
+        
+        noiseGain.gain.setValueAtTime(0, now);
+        noiseGain.gain.linearRampToValueAtTime(0.15, now + 0.02);
+        noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+        
+        whiteNoise.start(now);
+        whiteNoise.stop(now + 0.2);
+        
+        osc.start(now);
+        osc.stop(now + 0.3);
+    } else if (type === 'spell_launch') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(800, now + 0.3);
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.1, now + 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+        osc.start(now);
+        osc.stop(now + 0.4);
+    }
+}
+
+
+function isWalkable(x, y, isAir) {
+    if (isAir) return true;
+    if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return false;
+    if (y === 15 || y === 16) {
+        if ((x >= 2 && x <= 5) || (x >= 12 && x <= 15)) return true;
+        return false;
+    }
+    return true;
+}
+
+function aStar(start, goal, isAir) {
+    let openSet = [start];
+    let cameFrom = new Map();
+    let gScore = new Map();
+    let fScore = new Map();
+    
+    let hash = (p) => `${p.x},${p.y}`;
+    gScore.set(hash(start), 0);
+    fScore.set(hash(start), dist(start, goal));
+    
+    let iters = 0;
+    while(openSet.length > 0 && iters < 500) {
+        iters++;
+        openSet.sort((a,b) => (fScore.get(hash(a))||Infinity) - (fScore.get(hash(b))||Infinity));
+        let curr = openSet.shift();
+        
+        if (curr.x === goal.x && curr.y === goal.y) {
+            let path = [curr];
+            while(cameFrom.has(hash(curr))) {
+                curr = cameFrom.get(hash(curr));
+                path.push(curr);
+            }
+            return path.reverse();
+        }
+        
+        let dirs = [[0,1], [1,0], [0,-1], [-1,0], [1,1], [-1,1], [1,-1], [-1,-1]];
+        for(let d of dirs) {
+            let nx = curr.x + d[0];
+            let ny = curr.y + d[1];
+            if (!isWalkable(nx, ny, isAir)) continue;
+            
+            let neighbor = {x: nx, y: ny};
+            let tentativeG = (gScore.get(hash(curr))||Infinity) + Math.hypot(d[0], d[1]);
+            
+            if (tentativeG < (gScore.get(hash(neighbor))||Infinity)) {
+                cameFrom.set(hash(neighbor), curr);
+                gScore.set(hash(neighbor), tentativeG);
+                fScore.set(hash(neighbor), tentativeG + dist(neighbor, goal));
+                if (!openSet.find(p => p.x === nx && p.y === ny)) {
+                    openSet.push(neighbor);
+                }
+            }
+        }
+    }
+    return null;
+}
+
+
+let musicPlaying = false;
+let musicInterval = null;
+
+function playMusic() {
+    if (musicPlaying || !soundEnabled || audioCtx.state === 'suspended') return;
+    musicPlaying = true;
+    
+    musicInterval = setInterval(() => {
+        if (!soundEnabled || audioCtx.state === 'suspended') return;
+        let now = audioCtx.currentTime;
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        let notes = [110, 130, 110, 146, 164, 110, 130, 110];
+        let note = notes[Math.floor(Date.now() / 500) % notes.length];
+        
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(note, now);
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.03, now + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        
+        osc.start(now);
+        osc.stop(now + 0.4);
+    }, 500);
+}
+
+// --- Game State ---
+let canvas, ctx;
+let cw, ch, cellSize;
+let lastTime = 0;
+let gameTime = 180; // 3 minutes
+let isOvertime = false;
+let isGameOver = false;
+let hoverX = -1, hoverY = -1;
+let globalTime = 0;
+let screenShake = 0;
+
+let elixir = 5;
+let elixirRate = 1 / 2.8;
+
+let entities = [];
+let projectiles = [];
+
+let spellProjectiles = [];
+
+class SpellProjectile {
+    constructor(startX, startY, targetX, targetY, card, team) {
+        this.x = startX;
+        this.y = startY;
+        this.startX = startX;
+        this.startY = startY;
+        this.targetX = targetX;
+        this.targetY = targetY;
+        this.card = card;
+        this.team = team;
+        
+        let d = Math.hypot(targetX - startX, targetY - startY);
+        this.speed = 15.0; 
+        this.duration = d / this.speed;
+        this.time = 0;
+        
+        playSound('spell_launch');
+    }
+    
+    update(dt) {
+        this.time += dt;
+        let t = this.time / this.duration;
+        if (t >= 1.0) {
+            this.hit();
+            return true;
+        }
+        
+        this.x = this.startX + (this.targetX - this.startX) * t;
+        this.y = this.startY + (this.targetY - this.startY) * t;
+        
+        particles.push(new Particle(this.x * cellSize, this.y * cellSize, this.card.id === 'meteoro' ? '#f97316' : '#d946ef'));
+        return false;
+    }
+    
+    hit() {
+        effects.push({ x: this.targetX, y: this.targetY, radius: this.card.radius, time: 0.5, type: this.card.id });
+        playSound('spell');
+        
+        entities.forEach(e => {
+            if (e.team !== this.team && dist(e, {x: this.targetX, y: this.targetY}) <= this.card.radius) {
+                let dmg = e.isBuilding ? this.card.crownDmg : this.card.damage;
+                e.damage(dmg);
+                if (this.card.stun) e.stunTimer = this.card.stun;
+                if (this.card.knockback && !e.isBuilding) {
+                    let angle = Math.atan2(e.y - this.targetY, e.x - this.targetX);
+                    e.x += Math.cos(angle) * this.card.knockback;
+                    e.y += Math.sin(angle) * this.card.knockback;
+                }
+            }
+        });
+    }
+    
+    draw(ctx) {
+        let px = this.x * cellSize;
+        let py = this.y * cellSize;
+        let offsetX = (cw - COLS * cellSize) / 2;
+        let offsetY = (ch - ROWS * cellSize) / 2;
+        px += offsetX;
+        py += offsetY;
+        
+        let t = this.time / this.duration;
+        let h = Math.sin(t * Math.PI) * 4 * cellSize;
+        
+        ctx.fillStyle = this.card.id === 'meteoro' ? '#f97316' : '#a855f7';
+        ctx.beginPath();
+        ctx.arc(px, py - h, cellSize*0.6, 0, Math.PI*2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+}
+
+let effects = [];
+let particles = []; // visuals
+
+// Deck
+let deck = Object.keys(CARDS_DB);
+let hand = [];
+let nextCard = null;
+let selectedCardIdx = -1;
+
+// --- Helper Math ---
+function dist(a, b) { return Math.hypot(b.x - a.x, b.y - a.y); }
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+// --- Classes ---
+class Entity {
+    constructor(x, y, team) {
+        this.id = Math.random().toString(36).substr(2, 9);
+        this.x = x;
+        this.y = y;
+        this.animTime = Math.random() * 10;
+        this.isMoving = false;
+        this.attackAnimTimer = 0;
+        this.team = team; // 1 = player, 2 = enemy
+        this.hp = 100;
+        this.maxHp = 100;
+        this.radius = 0.5;
+        this.isDead = false;
+        
+        this.target = null;
+        this.attackCooldown = 0;
+        this.stunTimer = 0;
+        
+        // Render
+        this.icon = '❓';
+    }
+
+    damage(amt) {
+        if (this.isDead) return;
+        this.hp -= amt;
+        if (this.hp <= 0) {
+            this.hp = 0;
+            this.die();
+        }
+        // Spawn damage text
+        spawnFloatText(`-${Math.floor(amt)}`, this.x, this.y, '#ff4444');
+    }
+
+    heal(amt) {
+        this.hp = Math.min(this.maxHp, this.hp + amt);
+    }
+
+    die() {
+        this.isDead = true;
+        if (this.mesh && typeof threeScene !== 'undefined') {
+            threeScene.remove(this.mesh);
+        }
+    }
+
+    update(dt) {}
+    draw(ctx) {}
+}
+
+class Tower extends Entity {
+    constructor(x, y, team, isNexus) {
+        super(x, y, team);
+        this.isNexus = isNexus;
+        this.maxHp = isNexus ? 4000 : 2534;
+        this.hp = this.maxHp;
+        this.damageAmt = isNexus ? 100 : 90;
+        this.attackSpeed = isNexus ? 1.0 : 0.8;
+        this.attackRange = isNexus ? 7.0 : 7.5;
+        this.radius = isNexus ? 1.5 : 1.2;
+        this.icon = isNexus ? '🏰' : '🗼';
+        this.isBuilding = true;
+        this.active = !isNexus; // Nexus inactive until hit or princess dies
+        if (typeof threeScene !== 'undefined' && threeScene) {
+            this.mesh = create3DBuilding(this);
+            if (this.mesh) threeScene.add(this.mesh);
+        }
+    }
+
+    damage(amt) {
+        super.damage(amt);
+        if (this.isNexus && !this.active) this.active = true;
+        
+        if (amt >= 50) {
+            playSound('tower_hit');
+        }
+    }
+
+    die() {
+        super.die();
+        // If princess dies, activate nexus
+        if (!this.isNexus) {
+            entities.forEach(e => {
+                if (e instanceof Tower && e.team === this.team && e.isNexus) {
+                    e.active = true;
+                }
+            });
+        } else {
+            // Nexus destroyed = Game Over
+            endGame(this.team === 1 ? 'lose' : 'win');
+        }
+    }
+
+    update(dt) {
+        if (!this.active || this.isDead) return;
+        if (this.stunTimer > 0) { this.stunTimer -= dt; return; }
+
+        if (this.attackCooldown > 0) this.attackCooldown -= dt;
+
+        if (!this.target || this.target.isDead || dist(this, this.target) > this.attackRange) {
+            this.target = findTarget(this, this.attackRange, true);
+        }
+
+        if (this.target && this.attackCooldown <= 0) {
+            // Shoot projectile
+            projectiles.push(new Projectile(this.x, this.y, this.target, this.damageAmt, false, 0));
+            this.attackCooldown = this.attackSpeed;
+        }
+    }
+
+    updateMesh() {
+        let offsetX = (cw - COLS * cellSize) / 2;
+        let offsetY = (ch - ROWS * cellSize) / 2;
+        if (this.mesh) {
+            let px = this.x * cellSize + offsetX;
+            let py = this.y * cellSize + offsetY;
+            this.mesh.position.set(px, ch - py, 0);
+            this.mesh.rotation.x = -Math.PI / 6;
+        }
+    }
+    
+    draw(ctx) {
+        let r = this.radius * cellSize;
+        drawHpBar(ctx, this.x * cellSize, this.y * cellSize - r - 10, this.hp, this.maxHp, this.level);
+    }
+}
+
+class Troop extends Entity {
+    constructor(x, y, team, card) {
+        super(x, y, team);
+        this.card = card;
+        this.maxHp = card.hp;
+        this.hp = this.maxHp;
+        this.damageAmt = card.damage;
+        this.attackSpeed = card.atkSpeed;
+        this.moveSpeed = card.speed;
+        this.attackRange = card.range;
+        this.isAir = card.isAir;
+        this.targetAir = card.targetAir;
+        this.targetBuildingOnly = card.targetBuildingOnly;
+        this.radius = card.radius;
+        this.icon = card.icon;
+        this.aoe = card.aoe;
+        this.aoeRadius = card.aoeRadius || 0;
+        
+        this.deployTimer = 1.0;
+        this.sightRange = this.attackRange + 5.5;
+        if (typeof threeScene !== 'undefined' && threeScene) {
+            this.mesh = create3DTroop(this);
+            if (this.mesh) threeScene.add(this.mesh);
+        }
+    }
+
+    update(dt) {
+        if (this.isDead) return;
+        this.animTime += dt;
+        if (this.attackAnimTimer > 0) this.attackAnimTimer -= dt;
+        this.isMoving = false;
+
+        if (this.deployTimer > 0) { this.deployTimer -= dt; return; }
+        if (this.stunTimer > 0) { this.stunTimer -= dt; return; }
+
+        if (this.attackCooldown > 0) this.attackCooldown -= dt;
+
+        // Retargeting
+        if (!this.target || this.target.isDead || dist(this, this.target) > this.sightRange) {
+            this.target = findTarget(this, this.sightRange, this.targetAir, this.targetBuildingOnly);
+        } else if (this.targetBuildingOnly && !this.target.isBuilding) {
+            this.target = findTarget(this, this.sightRange, this.targetAir, true);
+        }
+
+        if (!this.target) {
+            let tx = this.x;
+            let ty = this.team === 1 ? 0 : ROWS;
+            this.moveTowardsTargetPos(tx, ty, dt);
+            this.isMoving = true;
+            return;
+        }
+
+        let d = dist(this, this.target);
+        if (d <= this.attackRange + this.target.radius) {
+            // Attack
+            if (this.attackCooldown <= 0) {
+                this.attackAnimTimer = 0.2; // 0.2s attack anim
+                if (this.attackRange > 1.5) {
+                    projectiles.push(new Projectile(this.x, this.y, this.target, this.damageAmt, this.aoe, this.aoeRadius)); playSound(this.attackRange > 3 ? 'attack_magic' : 'attack_melee');
+                } else {
+                    if (this.aoe) {
+                        applyAoE(this.x, this.y, this.aoeRadius, this.damageAmt, this.team, this.targetAir);
+                    } else {
+                        this.target.damage(this.damageAmt); playSound('attack_melee');
+                    }
+                }
+                this.attackCooldown = this.attackSpeed;
+            }
+        } else {
+            // Move towards target
+            this.moveTowardsTarget(dt);
+            this.isMoving = true;
+        }
+    }
+
+    moveTowardsTargetPos(goalX, goalY, dt) {
+        let tx = goalX;
+        let ty = goalY;
+
+        if (!this.isAir) {
+            let mySide = this.y > 15.5;
+            let tSide = goalY > 15.5;
+            if (mySide !== tSide) {
+                if (!this.pathTimer || this.pathTimer <= 0 || !this.pathGoal || dist(this.pathGoal, {x: goalX, y: goalY}) > 2) {
+                    let sx = Math.floor(this.x);
+                    let sy = Math.floor(this.y);
+                    let gx = Math.floor(goalX);
+                    let gy = Math.floor(goalY);
+                    
+                    // Direct to bridge if moving to base
+                    if (!this.target) {
+                        let leftBridge = {x: 3.5, y: 15.5};
+                        let rightBridge = {x: 13.5, y: 15.5};
+                        let b = (dist(this, leftBridge) < dist(this, rightBridge)) ? leftBridge : rightBridge;
+                        gx = Math.floor(b.x);
+                        gy = Math.floor(b.y);
+                    }
+                    
+                    this.path = aStar({x: sx, y: sy}, {x: gx, y: gy}, false);
+                    this.pathTimer = 0.5; 
+                    this.pathGoal = {x: goalX, y: goalY};
+                } else {
+                    this.pathTimer -= dt;
+                }
+                
+                if (this.path && this.path.length > 1) {
+                    let next = this.path[1];
+                    if (dist(this, {x: next.x+0.5, y: next.y+0.5}) < 0.5 && this.path.length > 2) {
+                        next = this.path[2];
+                    }
+                    tx = next.x + 0.5;
+                    ty = next.y + 0.5;
+                }
+            } else {
+                this.path = null;
+            }
+        }
+
+        this.moveTowards(tx, ty, dt);
+    }
+
+    moveTowardsTarget(dt) {
+        this.moveTowardsTargetPos(this.target.x, this.target.y, dt);
+    }
+
+    moveTowards(tx, ty, dt) {
+        let angle = Math.atan2(ty - this.y, tx - this.x);
+        let moveDist = this.moveSpeed * dt;
+        
+        let newX = this.x + Math.cos(angle) * moveDist;
+        let newY = this.y + Math.sin(angle) * moveDist;
+
+        // River boundary collision for ground
+        if (!this.isAir) {
+            let onBridgeX = (newX >= 2.5 && newX <= 5.5) || 
+                            (newX >= 12.5 && newX <= 15.5);
+            if (!onBridgeX && newY > 14.5 && newY < 17.5) {
+                // Slide along river
+                newY = this.y;
+            }
+        }
+
+        this.x = clamp(newX, 0, COLS);
+        this.y = clamp(newY, 0, ROWS);
+    }
+
+    draw(ctx) {
+        let offsetX = (cw - COLS * cellSize) / 2;
+        let offsetY = (ch - ROWS * cellSize) / 2;
+        let r = this.radius * cellSize;
+        
+        if (this.mesh) {
+            let px = this.x * cellSize + offsetX;
+            let py = this.y * cellSize + offsetY;
+            
+            // moving anim
+            let visualY = py;
+            if (this.isMoving && !this.isAir) {
+                visualY += Math.abs(Math.sin(globalTime * 15)) * (r * -0.3);
+                this.mesh.rotation.y = Math.sin(globalTime * 10) * 0.2;
+            } else if (this.isAir) {
+                visualY += Math.sin(globalTime * 4) * (r * 0.2);
+                let wL = this.mesh.getObjectByName('wingL');
+                let wR = this.mesh.getObjectByName('wingR');
+                if (wL && wR) {
+                    wL.rotation.y = Math.sin(globalTime * 20) * 0.8;
+                    wR.rotation.y = -Math.sin(globalTime * 20) * 0.8;
+                }
+            }
+            
+            this.mesh.position.set(px, ch - visualY, 0);
+            
+            let rotZ = 0;
+            if (this.target) {
+                let angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
+                rotZ = angle - Math.PI/2; 
+            } else {
+                rotZ = this.team === 1 ? 0 : Math.PI;
+            }
+            
+            this.mesh.rotation.z = rotZ;
+            this.mesh.rotation.x = -Math.PI / 6; // Tilt for 3D perspective
+            
+            if (this.deployTimer > 0) {
+                this.mesh.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material.transparent = true;
+                        child.material.opacity = 0.5;
+                    }
+                });
+            } else {
+                this.mesh.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material.transparent = false;
+                        child.material.opacity = 1.0;
+                    }
+                });
+            }
+        }
+        
+        
+        drawHpBar(ctx, this.x * cellSize, this.y * cellSize - r - 10, this.hp, this.maxHp, this.level);
+
+    }
+}
+
+class Building extends Entity {
+    constructor(x, y, team, card) {
+        super(x, y, team);
+        this.card = card;
+        this.maxHp = card.hp;
+        this.hp = this.maxHp;
+        this.radius = card.radius;
+        this.icon = card.icon;
+        this.lifetime = card.lifetime;
+        this.lifeTimer = card.lifetime;
+        this.isBuilding = true;
+        
+        this.deployTimer = 1.0;
+
+        if (card.spawnCard) {
+            this.spawnTimer = card.spawnRate;
+        } else {
+            this.damageAmt = card.damage;
+            this.attackSpeed = card.atkSpeed;
+            this.attackRange = card.range;
+            this.targetAir = card.targetAir;
+        }
+    }
+
+    update(dt) {
+        if (this.isDead) return;
+        if (this.deployTimer > 0) { this.deployTimer -= dt; return; }
+
+        // Lifetime decay
+        this.lifeTimer -= dt;
+        this.hp = (this.lifeTimer / this.lifetime) * this.maxHp;
+        if (this.lifeTimer <= 0) {
+            this.die();
+            return;
+        }
+
+        if (this.stunTimer > 0) { this.stunTimer -= dt; return; }
+
+        if (this.card.spawnCard) {
+            // Spawner
+            this.spawnTimer -= dt;
+            if (this.spawnTimer <= 0) {
+                spawnUnit(this.card.spawnCard, this.x, this.y + (this.team===1?-1:1), this.team, 1);
+                this.spawnTimer = this.card.spawnRate;
+            }
+        } else {
+            // Cannon
+            if (this.attackCooldown > 0) this.attackCooldown -= dt;
+            if (!this.target || this.target.isDead || dist(this, this.target) > this.attackRange) {
+                this.target = findTarget(this, this.attackRange, this.targetAir, false);
+            }
+            if (this.target && this.attackCooldown <= 0) {
+                projectiles.push(new Projectile(this.x, this.y, this.target, this.damageAmt, false, 0));
+                this.attackCooldown = this.attackSpeed;
+            }
+        }
+    }
+
+    die() {
+        super.die();
+        if (this.card.deathSpawn) {
+            spawnUnit(this.card.spawnCard, this.x, this.y, this.team, this.card.deathSpawn);
+        }
+    }
+
+    updateMesh() {
+        let offsetX = (cw - COLS * cellSize) / 2;
+        let offsetY = (ch - ROWS * cellSize) / 2;
+        if (this.mesh) {
+            let px = this.x * cellSize + offsetX;
+            let py = this.y * cellSize + offsetY;
+            this.mesh.position.set(px, ch - py, 0);
+            this.mesh.rotation.x = -Math.PI / 6;
+            
+            if (this.deployTimer > 0) {
+                this.mesh.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material.transparent = true;
+                        child.material.opacity = 0.5;
+                    }
+                });
+            } else {
+                this.mesh.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material.transparent = false;
+                        child.material.opacity = 1.0;
+                    }
+                });
+            }
+        }
+    }
+
+    draw(ctx) {
+        let r = this.radius * cellSize;
+        drawHpBar(ctx, this.x * cellSize, this.y * cellSize - r - 10, this.hp, this.maxHp, this.level);
+    }
+}
+
+
+class Particle {
+    constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        let angle = Math.random() * Math.PI * 2;
+        let speed = Math.random() * 1.0 + 0.5;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+        this.life = 0.3 + Math.random() * 0.2;
+        this.maxLife = this.life;
+        this.color = color;
+        this.size = Math.random() * 2 + 1;
+    }
+    update(dt) {
+        this.x += this.vx * dt * 30;
+        this.y += this.vy * dt * 30;
+        this.life -= dt;
+    }
+    draw(ctx) {
+        ctx.globalAlpha = Math.max(0, this.life / this.maxLife);
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+}
+
+class Projectile {
+    constructor(x, y, target, damage, aoe, aoeRadius) {
+        this.x = x;
+        this.y = y;
+        this.target = target;
+        this.damageAmt = damage;
+        this.aoe = aoe;
+        this.aoeRadius = aoeRadius;
+        this.speed = 10.0;
+        this.isDead = false;
+        this.team = target.team === 1 ? 2 : 1; // Projectile belongs to opposite of target
+    }
+
+    update(dt) {
+        if (this.isDead) return;
+        if (this.target.isDead && !this.aoe) {
+            this.isDead = true; return;
+        }
+
+        // Move
+        let tx = this.target.x;
+        let ty = this.target.y;
+        let d = dist(this, this.target);
+        
+        if (d < 0.5) {
+            // Hit
+            if (this.aoe) {
+                applyAoE(this.x, this.y, this.aoeRadius, this.damageAmt, this.team, true);
+            } else {
+                this.target.damage(this.damageAmt); playSound('attack_melee');
+            }
+            this.isDead = true;
+        } else {
+            let angle = Math.atan2(ty - this.y, tx - this.x);
+            this.x += Math.cos(angle) * this.speed * dt;
+            this.y += Math.sin(angle) * this.speed * dt;
+        }
+    }
+
+    draw(ctx) {
+        let px = this.x * cellSize;
+        let py = this.y * cellSize;
+        ctx.fillStyle = '#fde047';
+        ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI*2); ctx.fill();
+    }
+}
+
+// --- Systems ---
+
+
+let selectedDeck = [];
+
+function initHub() {
+    let grid = document.getElementById('deck-grid');
+    grid.innerHTML = '';
+    
+    Object.keys(CARDS_DB).forEach(cardId => {
+        let card = CARDS_DB[cardId];
+        let el = document.createElement('div');
+        el.className = 'hub-card';
+        el.innerHTML = `
+            <div class="card-cost">${card.cost}</div>
+            <div class="card-icon">${card.icon}</div>
+            <div class="card-name">${card.name}</div>
+        `;
+        
+        el.onclick = () => {
+            if (selectedDeck.includes(cardId)) {
+                selectedDeck = selectedDeck.filter(id => id !== cardId);
+                el.classList.remove('selected');
+            } else {
+                if (selectedDeck.length < 6) {
+                    selectedDeck.push(cardId);
+                    el.classList.add('selected');
+                }
+            }
+            document.getElementById('deck-count').innerText = selectedDeck.length;
+            document.getElementById('start-btn').disabled = selectedDeck.length !== 6;
+        };
+        
+        grid.appendChild(el);
+    });
+    
+    document.getElementById('start-btn').onclick = () => {
+        if (selectedDeck.length === 6) {
+            // Enable audio context on interaction
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            document.getElementById('hub-container').style.display = 'none';
+            document.getElementById('game-container').style.display = 'flex';
+            deck = [...selectedDeck];
+            initGame();
+        }
+    };
+}
+
+
+let threeScene, threeCamera, threeRenderer;
+
+function initThree() {
+    let canvas3d = document.getElementById('threeCanvas');
+    if (!window.THREE) return; // Safeguard if not loaded
+    threeRenderer = new THREE.WebGLRenderer({ canvas: canvas3d, alpha: true, antialias: true });
+    threeRenderer.setSize(cw, ch);
+    
+    threeScene = new THREE.Scene();
+    threeCamera = new THREE.OrthographicCamera(0, cw, ch, 0, -1000, 1000);
+    threeCamera.position.set(0, 0, 100);
+    
+    let ambLight = new THREE.AmbientLight(0xffffff, 0.7);
+    threeScene.add(ambLight);
+    
+    let dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    dirLight.position.set(cw/2, ch, 200);
+    threeScene.add(dirLight);
+}
+
+function create3DTroop(entity) {
+    if (!window.THREE) return null;
+    const group = new THREE.Group();
+    const isBlue = entity.team === 1;
+    const primary = isBlue ? 0x3b82f6 : 0xef4444;
+    const skin = 0xffe4c4;
+    const metal = 0x94a3b8;
+    const dark = 0x1e293b;
+    const brown = 0x8b5a2b;
+    const darkBrown = 0x5c4033;
+    
+    // Scale up overall size to make models much bigger
+    let r = entity.radius * cellSize * 2.5;
+    let cardId = entity.card ? entity.card.id : '';
+    
+    let createHumanoid = (hasSword, hasBow, hasAxe, hasStaff) => {
+        let g = new THREE.Group();
+        // Body (more stylized, wider top)
+        const bodyGeo = new THREE.CylinderGeometry(r*0.6, r*0.4, r*1.2, 12);
+        const bodyMat = new THREE.MeshLambertMaterial({ color: primary , side: THREE.DoubleSide});
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.rotation.x = -Math.PI / 2; 
+        body.position.z = -r*0.6;
+        g.add(body);
+        
+        // Head
+        const headGeo = new THREE.SphereGeometry(r*0.5, 12, 12);
+        const headMat = new THREE.MeshLambertMaterial({ color: skin , side: THREE.DoubleSide});
+        const head = new THREE.Mesh(headGeo, headMat);
+        head.position.z = -r*1.2 - r*0.3;
+        g.add(head);
+        
+        // Backpack/Armor detail
+        const armor = new THREE.Mesh(new THREE.BoxGeometry(r*0.9, r*0.4, r*0.8), new THREE.MeshLambertMaterial({color: 0x475569, side: THREE.DoubleSide}));
+        armor.position.set(0, -r*0.2, -r*0.6);
+        g.add(armor);
+
+        if (hasSword) {
+            const sword = new THREE.Group();
+            const hilt = new THREE.Mesh(new THREE.CylinderGeometry(r*0.1, r*0.1, r*0.4), new THREE.MeshLambertMaterial({color: brown, side: THREE.DoubleSide}));
+            const blade = new THREE.Mesh(new THREE.BoxGeometry(r*0.15, r*1.2, r*0.05), new THREE.MeshLambertMaterial({color: metal, side: THREE.DoubleSide}));
+            blade.position.y = r*0.8;
+            sword.add(hilt); sword.add(blade);
+            sword.position.set(r*0.8, r*0.5, -r*0.6);
+            sword.rotation.x = Math.PI / 4;
+            g.add(sword);
+        }
+        if (hasBow) {
+            const bow = new THREE.Group();
+            const arc = new THREE.Mesh(new THREE.TorusGeometry(r*0.8, r*0.1, 6, 16, Math.PI), new THREE.MeshLambertMaterial({ color: brown , side: THREE.DoubleSide}));
+            const string = new THREE.Mesh(new THREE.CylinderGeometry(r*0.02, r*0.02, r*1.6), new THREE.MeshLambertMaterial({ color: 0xffffff , side: THREE.DoubleSide}));
+            string.rotation.z = Math.PI / 2;
+            bow.add(arc); bow.add(string);
+            bow.position.set(0, r*0.8, -r*0.6);
+            g.add(bow);
+        }
+        if (hasAxe) {
+            const axe = new THREE.Group();
+            const handle = new THREE.Mesh(new THREE.CylinderGeometry(r*0.1, r*0.1, r*1.8), new THREE.MeshLambertMaterial({color: brown, side: THREE.DoubleSide}));
+            const headM = new THREE.Mesh(new THREE.BoxGeometry(r*0.8, r*0.4, r*0.1), new THREE.MeshLambertMaterial({color: metal, side: THREE.DoubleSide}));
+            headM.position.x = r*0.3;
+            headM.position.y = r*0.6;
+            axe.add(handle); axe.add(headM);
+            axe.position.set(r*0.7, r*0.5, -r*0.6);
+            g.add(axe);
+        }
+        if (hasStaff) {
+            const staff = new THREE.Mesh(new THREE.CylinderGeometry(r*0.1, r*0.1, r*2.0), new THREE.MeshLambertMaterial({color: brown, side: THREE.DoubleSide}));
+            const gem = new THREE.Mesh(new THREE.SphereGeometry(r*0.3, 8, 8), new THREE.MeshLambertMaterial({color: 0xd946ef, side: THREE.DoubleSide}));
+            gem.position.y = r*1.0;
+            staff.add(gem);
+            staff.position.set(r*0.8, r*0.5, -r*0.6);
+            g.add(staff);
+        }
+        return g;
+    };
+    
+    if (cardId === 'guardiao') {
+        group.add(createHumanoid(true, false, false, false));
+    } else if (cardId === 'atiradoras') {
+        group.add(createHumanoid(false, true, false, false));
+    } else if (cardId === 'lorde') {
+        const lorde = createHumanoid(false, false, true, false);
+        lorde.scale.set(1.2, 1.2, 1.2);
+        group.add(lorde);
+    } else if (cardId === 'maga') {
+        group.add(createHumanoid(false, false, false, true));
+    } else if (cardId === 'golem') {
+        // Detailed Golem
+        const gGeo = new THREE.DodecahedronGeometry(r*1.2);
+        const gMat = new THREE.MeshLambertMaterial({ color: 0x78716c , side: THREE.DoubleSide});
+        const body = new THREE.Mesh(gGeo, gMat);
+        body.position.z = -r*1.0;
+        group.add(body);
+        const head = new THREE.Mesh(new THREE.BoxGeometry(r*0.8, r*0.8, r*0.8), gMat);
+        head.position.set(0, r*0.5, -r*2.2);
+        group.add(head);
+        const armL = new THREE.Mesh(new THREE.BoxGeometry(r*0.6, r*1.5, r*0.6), gMat);
+        armL.position.set(-r*1.2, 0, -r*1.0);
+        group.add(armL);
+        const armR = new THREE.Mesh(new THREE.BoxGeometry(r*0.6, r*1.5, r*0.6), gMat);
+        armR.position.set(r*1.2, 0, -r*1.0);
+        group.add(armR);
+    } else if (cardId === 'dragao') {
+        // Detailed Dragon
+        const bodyGeo = new THREE.CylinderGeometry(r*0.5, r*0.8, r*1.5, 12);
+        const mat = new THREE.MeshLambertMaterial({color: 0x10b981, side: THREE.DoubleSide});
+        const body = new THREE.Mesh(bodyGeo, mat);
+        body.rotation.x = -Math.PI / 2;
+        body.position.z = -r*0.5;
+        group.add(body);
+        const head = new THREE.Mesh(new THREE.BoxGeometry(r*0.8, r*0.8, r*0.8), mat);
+        head.position.set(0, r*0.8, -r*1.5);
+        group.add(head);
+        const wingMat = new THREE.MeshLambertMaterial({color: 0x059669, side: THREE.DoubleSide});
+        const wingL = new THREE.Mesh(new THREE.PlaneGeometry(r*2, r*1.5), wingMat);
+        wingL.position.set(-r*1.2, 0, -r*0.8);
+        wingL.rotation.y = -Math.PI / 6;
+        group.add(wingL);
+        const wingR = new THREE.Mesh(new THREE.PlaneGeometry(r*2, r*1.5), wingMat);
+        wingR.position.set(r*1.2, 0, -r*0.8);
+        wingR.rotation.y = Math.PI / 6;
+        group.add(wingR);
+        const tail = new THREE.Mesh(new THREE.ConeGeometry(r*0.4, r*1.5, 8), mat);
+        tail.rotation.x = Math.PI / 2;
+        tail.position.set(0, -r*1.0, -r*0.5);
+        group.add(tail);
+    } else if (cardId === 'dracos') {
+        // Detailed Bat (Morcego)
+        const mat = new THREE.MeshLambertMaterial({color: 0x3b0764, side: THREE.DoubleSide});
+        const wingMat = new THREE.MeshLambertMaterial({color: 0x1e1b4b, side: THREE.DoubleSide});
+        const bodyGeo = new THREE.BoxGeometry(r*0.6, r*0.8, r*0.6);
+        const body = new THREE.Mesh(bodyGeo, mat);
+        body.position.z = -r*0.5;
+        group.add(body);
+        const headGeo = new THREE.BoxGeometry(r*0.5, r*0.5, r*0.5);
+        const head = new THREE.Mesh(headGeo, mat);
+        head.position.set(0, r*0.6, -r*0.5);
+        group.add(head);
+        const wingL = new THREE.Mesh(new THREE.BoxGeometry(r*1.8, r*0.8, r*0.1), wingMat);
+        wingL.position.set(-r*1.2, 0, -r*0.5);
+        wingL.name = "wingL"; // for animation
+        group.add(wingL);
+        const wingR = new THREE.Mesh(new THREE.BoxGeometry(r*1.8, r*0.8, r*0.1), wingMat);
+        wingR.position.set(r*1.2, 0, -r*0.5);
+        wingR.name = "wingR";
+        group.add(wingR);
+        const earGeo = new THREE.ConeGeometry(r*0.15, r*0.4, 4);
+        const earL = new THREE.Mesh(earGeo, mat);
+        earL.position.set(-r*0.2, r*0.9, -r*0.5);
+        group.add(earL);
+        const earR = new THREE.Mesh(earGeo, mat);
+        earR.position.set(r*0.2, r*0.9, -r*0.5);
+        group.add(earR);
+        const eyeMat = new THREE.MeshLambertMaterial({color: 0xef4444});
+        const eyeL = new THREE.Mesh(new THREE.BoxGeometry(r*0.1, r*0.1, r*0.1), eyeMat);
+        eyeL.position.set(-r*0.15, r*0.7, -r*0.7);
+        group.add(eyeL);
+        const eyeR = new THREE.Mesh(new THREE.BoxGeometry(r*0.1, r*0.1, r*0.1), eyeMat);
+        eyeR.position.set(r*0.15, r*0.7, -r*0.7);
+        group.add(eyeR);
+    } else if (cardId === 'corredor') {
+        const pigMat = new THREE.MeshLambertMaterial({color: 0x8b5a2b, side: THREE.DoubleSide});
+        const pig = new THREE.Mesh(new THREE.CylinderGeometry(r*0.7, r*0.7, r*2.0, 12), pigMat);
+        pig.rotation.x = Math.PI / 2;
+        pig.position.z = -r*0.6;
+        group.add(pig);
+        const snout = new THREE.Mesh(new THREE.BoxGeometry(r*0.6, r*0.6, r*0.6), new THREE.MeshLambertMaterial({color: 0xf4a460, side: THREE.DoubleSide}));
+        snout.position.set(0, r*1.0, -r*0.6);
+        group.add(snout);
+        const rider = createHumanoid(false, false, true, false); // hammer/axe rider
+        rider.position.z = -r*1.2;
+        rider.position.y = -r*0.2;
+        group.add(rider);
+    } else if (cardId === 'principe') {
+        const horseMat = new THREE.MeshLambertMaterial({color: 0xffffff, side: THREE.DoubleSide});
+        const horse = new THREE.Mesh(new THREE.CylinderGeometry(r*0.7, r*0.7, r*2.2, 12), horseMat);
+        horse.rotation.x = Math.PI / 2;
+        horse.position.z = -r*0.75;
+        group.add(horse);
+        const horseHead = new THREE.Mesh(new THREE.BoxGeometry(r*0.5, r*0.8, r*0.8), horseMat);
+        horseHead.position.set(0, r*1.0, -r*1.2);
+        group.add(horseHead);
+        const rider = createHumanoid(false, false, false, false);
+        rider.position.z = -r*1.4;
+        group.add(rider);
+        const lance = new THREE.Mesh(new THREE.CylinderGeometry(r*0.1, r*0.1, r*3, 8), new THREE.MeshLambertMaterial({color: 0xd4af37, side: THREE.DoubleSide}));
+        lance.rotation.x = Math.PI / 2;
+        lance.position.set(r*0.8, r*1.5, -r*1.0);
+        group.add(lance);
+    } else if (cardId === 'valquiria') {
+        const h = createHumanoid(false, false, false, false);
+        const axeGeo = new THREE.BoxGeometry(r*2.5, r*0.2, r*0.5);
+        const axeMat = new THREE.MeshLambertMaterial({color: metal, side: THREE.DoubleSide});
+        const axe = new THREE.Mesh(axeGeo, axeMat);
+        axe.position.set(0, 0, -r*1.5);
+        h.add(axe);
+        group.add(h);
+    } else if (cardId === 'espectros') {
+        const ghost = new THREE.Mesh(new THREE.ConeGeometry(r*0.8, r*2, 16), new THREE.MeshLambertMaterial({color: 0xe2e8f0, transparent: true, opacity: 0.7, side: THREE.DoubleSide}));
+        ghost.rotation.x = Math.PI / 2;
+        ghost.position.z = -r;
+        group.add(ghost);
+        const eyes = new THREE.Mesh(new THREE.BoxGeometry(r*0.6, r*0.2, r*0.2), new THREE.MeshLambertMaterial({color: 0x1e3a8a, side: THREE.DoubleSide}));
+        eyes.position.set(0, r*0.4, -r*0.8);
+        group.add(eyes);
+    } else {
+        group.add(createHumanoid(true, false, false, false));
+    }
+    
+    group.rotation.order = 'ZXY';
+    return group;
+}
+
+function create3DBuilding(entity) {
+    if (!window.THREE) return null;
+    const group = new THREE.Group();
+    const isBlue = entity.team === 1;
+    const primary = isBlue ? 0x1e3a8a : 0x7f1d1d;
+    const stone = 0x94a3b8;
+    const darkStone = 0x475569;
+    const wood = 0x8b5a2b;
+    
+    let r = entity.radius * cellSize;
+    if (entity.isNexus) r *= 1.2;
+    
+    let cardId = entity.card ? entity.card.id : '';
+    
+    if (entity.isNexus || entity.icon === '🗼' || entity.icon === '🏰') {
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(r, r*1.1, r*2.5, 12), new THREE.MeshLambertMaterial({color: darkStone, side: THREE.DoubleSide}));
+        base.rotation.x = Math.PI / 2;
+        base.position.z = -r*1.25;
+        group.add(base);
+        
+        // Door
+        const door = new THREE.Mesh(new THREE.BoxGeometry(r*0.6, r*0.1, r*1.0), new THREE.MeshLambertMaterial({color: 0x3e2723, side: THREE.DoubleSide}));
+        door.position.set(0, r*1.0, -r*0.5);
+        group.add(door);
+
+        const roof = new THREE.Mesh(new THREE.ConeGeometry(r*1.3, r*1.6, 12), new THREE.MeshLambertMaterial({color: primary, side: THREE.DoubleSide}));
+        roof.rotation.x = Math.PI / 2;
+        roof.position.z = -r*2.5 - r*0.8;
+        group.add(roof);
+    } else if (cardId === 'canhao') {
+        const base = new THREE.Mesh(new THREE.BoxGeometry(r*1.6, r*1.6, r*0.6), new THREE.MeshLambertMaterial({color: wood, side: THREE.DoubleSide}));
+        base.position.z = -r*0.3;
+        group.add(base);
+        const mount = new THREE.Mesh(new THREE.BoxGeometry(r*0.8, r*0.8, r*0.6), new THREE.MeshLambertMaterial({color: darkStone, side: THREE.DoubleSide}));
+        mount.position.z = -r*0.9;
+        group.add(mount);
+        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(r*0.4, r*0.4, r*2.2, 12), new THREE.MeshLambertMaterial({color: 0x111111, side: THREE.DoubleSide}));
+        barrel.position.set(0, r*0.6, -r*1.2);
+        group.add(barrel);
+    } else if (cardId === 'xbesta') {
+        const base = new THREE.Mesh(new THREE.BoxGeometry(r*1.5, r*1.5, r*1.5), new THREE.MeshLambertMaterial({color: wood, side: THREE.DoubleSide}));
+        base.position.z = -r*0.75;
+        group.add(base);
+        const bowMat = new THREE.MeshLambertMaterial({color: 0xd4af37, side: THREE.DoubleSide});
+        const bow = new THREE.Mesh(new THREE.TorusGeometry(r*1.2, r*0.15, 8, 16, Math.PI), bowMat);
+        bow.position.set(0, 0, -r*1.5);
+        group.add(bow);
+        const arrow = new THREE.Mesh(new THREE.CylinderGeometry(r*0.05, r*0.05, r*1.8, 8), new THREE.MeshLambertMaterial({color: 0x94a3b8, side: THREE.DoubleSide}));
+        arrow.position.set(0, r*0.8, -r*1.5);
+        group.add(arrow);
+    } else if (cardId === 'santuario') {
+        const base = new THREE.Mesh(new THREE.BoxGeometry(r*1.8, r*1.8, r*0.5), new THREE.MeshLambertMaterial({color: 0x4b5563, side: THREE.DoubleSide}));
+        base.position.z = -r*0.25;
+        group.add(base);
+        const stoneM = new THREE.Mesh(new THREE.BoxGeometry(r*1.4, r*0.4, r*2.2), new THREE.MeshLambertMaterial({color: stone, side: THREE.DoubleSide}));
+        stoneM.position.set(0, 0, -r*1.5);
+        group.add(stoneM);
+        const cross = new THREE.Mesh(new THREE.BoxGeometry(r*0.8, r*0.2, r*0.2), new THREE.MeshLambertMaterial({color: 0x1e293b, side: THREE.DoubleSide}));
+        cross.position.set(0, 0, -r*2.5);
+        group.add(cross);
+    } else {
+        const base = new THREE.Mesh(new THREE.BoxGeometry(r*1.8, r*1.8, r*1.5), new THREE.MeshLambertMaterial({color: primary, side: THREE.DoubleSide}));
+        base.position.z = -r*0.75;
+        group.add(base);
+    }
+    
+    group.rotation.order = 'ZXY';
+    return group;
+}
+
+function initGame() {
+    canvas = document.getElementById('gameCanvas');
+    ctx = canvas.getContext('2d');
+    
+    resize();
+    initThree();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    playMusic();
+    
+    // Setup Deck
+    shuffle(deck);
+    hand = deck.splice(0, 4);
+    nextCard = deck.shift();
+    renderHand();
+
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Bind Interaction
+    canvas.addEventListener('pointerdown', handleBoardClick);
+
+    // Add pointer hover tracking
+    canvas.addEventListener('pointermove', (e) => {
+        let rect = canvas.getBoundingClientRect();
+        let offsetX = (cw - COLS * cellSize) / 2;
+        let offsetY = (ch - ROWS * cellSize) / 2;
+        hoverX = (e.clientX - rect.left - offsetX) / cellSize;
+        hoverY = (e.clientY - rect.top - offsetY) / cellSize;
+    });
+    canvas.addEventListener('pointerleave', () => {
+        hoverX = -1;
+        hoverY = -1;
+    });
+
+    // Setup Map Entities
+    // Player
+    entities.push(new Tower(3.5, 26, 1, false)); // L Princess
+    entities.push(new Tower(14.5, 26, 1, false)); // R Princess
+    entities.push(new Tower(9, 30.5, 1, true)); // King
+
+    // Enemy
+    entities.push(new Tower(3.5, 6, 2, false)); // L Princess
+    entities.push(new Tower(14.5, 6, 2, false)); // R Princess
+    entities.push(new Tower(9, 1.5, 2, true)); // King
+
+    lastTime = performance.now();
+    requestAnimationFrame(loop);
+}
+
+function resize() {
+    let wrapper = document.getElementById('canvas-wrapper') || document.body;
+    cw = wrapper.clientWidth;
+    ch = wrapper.clientHeight;
+    canvas.width = cw;
+    canvas.height = ch;
+    
+    // We want the grid to fit or cover? Usually fit height.
+    cellSize = Math.min(cw / COLS, ch / ROWS) * 0.95;
+    
+    if (typeof threeRenderer !== 'undefined' && threeRenderer) {
+        threeRenderer.setSize(cw, ch);
+        threeCamera.left = 0;
+        threeCamera.right = cw;
+        threeCamera.top = ch;
+        threeCamera.bottom = 0;
+        threeCamera.updateProjectionMatrix();
+    }
+}
+
+function handleBoardClick(e) {
+    if (isGameOver || selectedCardIdx < 0) return;
+    
+    let rect = canvas.getBoundingClientRect();
+    // Center the board horizontally if cellsize * COLS < cw
+    let offsetX = (cw - COLS * cellSize) / 2;
+    let offsetY = (ch - ROWS * cellSize) / 2;
+
+    let cx = (e.clientX - rect.left - offsetX) / cellSize;
+    let cy = (e.clientY - rect.top - offsetY) / cellSize;
+
+    if (cx < 0 || cx > COLS || cy < 0 || cy > ROWS) return;
+
+    let cardId = hand[selectedCardIdx];
+    let card = CARDS_DB[cardId];
+
+    // Validate placement
+    // 1. Must be on player side (y >= 16) unless spell
+    if (card.type !== 'spell' && cy < 16) {
+        selectedCardIdx = -1;
+        renderHand();
+        return;
+    }
+    // 2. Must have elixir
+    if (elixir < card.cost) {
+        showWarning("Elixir Insuficiente!");
+        selectedCardIdx = -1;
+        renderHand();
+        return;
+    }
+
+    // Deploy
+    elixir -= card.cost;
+    playCard(card, cx, cy, 1);
+    
+    // Spawn Particles on Canvas
+    for(let i=0; i<10; i++) {
+        let colors = ['#ffffff', '#e2e8f0', '#94a3b8'];
+        let c = colors[Math.floor(Math.random()*colors.length)];
+        particles.push(new Particle(cx * cellSize, cy * cellSize, c));
+    }
+    
+    // Trigger CSS animation on the card slot before it is removed
+    let slots = document.querySelectorAll('.card-slot');
+    if (slots[selectedCardIdx]) {
+        slots[selectedCardIdx].classList.add('deploying');
+    }
+
+    // Cycle delayed to allow animation
+    let cycleIdx = selectedCardIdx;
+    selectedCardIdx = -1; // Deselect immediately
+    
+    setTimeout(() => {
+        deck.push(hand[cycleIdx]);
+        hand[cycleIdx] = nextCard;
+        nextCard = deck.shift();
+        renderHand();
+    }, 300);
+}
+
+function playCard(card, x, y, team) {
+    if (card.type === 'spell') {
+        let king = entities.find(e => e.team === team && e.isNexus);
+        let startX = king ? king.x : (team === 1 ? COLS/2 : COLS/2);
+        let startY = king ? king.y : (team === 1 ? ROWS : 0);
+        spellProjectiles.push(new SpellProjectile(startX, startY, x, y, card, team));
+    } else if (card.type === 'building') {
+        entities.push(new Building(x, y, team, card));
+    } else {
+        spawnUnit(card.id, x, y, team, card.count);
+    }
+}
+
+function spawnUnit(cardId, x, y, team, count) {
+    let card = CARDS_DB[cardId];
+    if (count === 1) {
+        entities.push(new Troop(x, y, team, card));
+    } else {
+        // Spawn around center
+        let offsets = [[0,0], [-0.5, 0.5], [0.5, 0.5], [-0.5, -0.5], [0.5, -0.5]];
+        for(let i=0; i<count; i++) {
+            let ox = offsets[i%offsets.length][0];
+            let oy = offsets[i%offsets.length][1];
+            entities.push(new Troop(x + ox, y + oy, team, card));
+        }
+    }
+}
+
+function findTarget(source, range, canTargetAir, buildingOnly) {
+    let bestDist = Infinity;
+    let best = null;
+    for (let e of entities) {
+        if (e.team !== source.team && !e.isDead) {
+            if (e.isAir && !canTargetAir) continue;
+            if (buildingOnly && !e.isBuilding) continue;
+            
+            let d = dist(source, e);
+            if (d < bestDist && d <= range) {
+                bestDist = d;
+                best = e;
+            }
+        }
+    }
+    return best;
+}
+
+function applyAoE(x, y, radius, damage, team, targetAir) {
+    entities.forEach(e => {
+        if (e.team !== team && !e.isDead) {
+            if (e.isAir && !targetAir) return;
+            if (dist({x,y}, e) <= radius) {
+                e.damage(damage);
+            }
+        }
+    });
+}
+
+function pushPhysics() {
+    // Simple collision resolution between ground units
+    let groundUnits = entities.filter(e => !e.isAir && !e.isBuilding && !e.isDead);
+    for (let i = 0; i < groundUnits.length; i++) {
+        for (let j = i + 1; j < groundUnits.length; j++) {
+            let a = groundUnits[i];
+            let b = groundUnits[j];
+            let dx = b.x - a.x;
+            let dy = b.y - a.y;
+            let d = Math.hypot(dx, dy);
+            let minDist = a.radius + b.radius;
+            if (d < minDist && d > 0.001) {
+                let overlap = minDist - d;
+                let nx = dx / d;
+                let ny = dy / d;
+                // Push apart
+                a.x -= nx * overlap * 0.5;
+                a.y -= ny * overlap * 0.5;
+                b.x += nx * overlap * 0.5;
+                b.y += ny * overlap * 0.5;
+            }
+        }
+    }
+}
+
+function loop(time) {
+    let dt = (time - lastTime) / 1000;
+    lastTime = time;
+    if (dt > 0.1) dt = 0.1;
+
+    if (!isGameOver) {
+        update(dt);
+    }
+    draw();
+    
+    requestAnimationFrame(loop);
+}
+
+// Enemy Bot logic
+let botTimer = 0;
+function updateBot(dt) {
+    botTimer += dt;
+    if (botTimer > 3.0) {
+        botTimer = 0;
+        // Basic AI: Randomly play cards
+        let keys = Object.keys(CARDS_DB);
+        let rCard = CARDS_DB[keys[Math.floor(Math.random()*keys.length)]];
+        if (Math.random() > 0.3) {
+            let ex = Math.random() > 0.5 ? 4 : 14;
+            let ey = 6 + Math.random() * 4;
+            playCard(rCard, ex, ey, 2);
+        }
+    }
+}
+
+function update(dt) {
+    // Time & Elixir
+    gameTime -= dt;
+globalTime += dt;
+    if (gameTime <= 0 && !isOvertime) {
+        // Check scores
+        let pTowers = entities.filter(e => e.team === 1 && e instanceof Tower).length;
+        let eTowers = entities.filter(e => e.team === 2 && e instanceof Tower).length;
+        if (pTowers === eTowers) {
+            isOvertime = true;
+            gameTime = 120; // 2 min sudden death
+        } else {
+            endGame(pTowers > eTowers ? 'win' : 'lose');
+            return;
+        }
+    }
+    
+    if (isOvertime && gameTime <= 0) {
+        endGame('draw');
+        return;
+    }
+
+    // Elixir rate changes
+    if (isOvertime) {
+        elixirRate = 1 / 0.9;
+    } else if (gameTime <= 60) {
+        elixirRate = 1 / 1.4;
+    } else {
+        elixirRate = 1 / 2.8;
+    }
+
+    elixir = clamp(elixir + elixirRate * dt, 0, 10);
+    
+    updateUI();
+    updateBot(dt);
+
+    // Entities
+    entities.forEach(e => e.update(dt));
+    projectiles.forEach(p => p.update(dt));
+    
+    // Physics
+    pushPhysics();
+
+    // Cleanup
+    entities = entities.filter(e => !e.isDead);
+    projectiles = projectiles.filter(p => !p.isDead);
+    effects.forEach(ef => ef.time -= dt);
+    effects = effects.filter(ef => ef.time > 0);
+}
+
+function draw() {
+    let offsetX = (cw - COLS * cellSize) / 2;
+    let offsetY = (ch - ROWS * cellSize) / 2;
+
+    ctx.save();
+    
+    // Fill background bounds
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fillRect(0, 0, cw, ch);
+    
+    ctx.translate(offsetX, offsetY);
+
+
+    // Grass Background
+    ctx.fillStyle = '#166534';
+    ctx.fillRect(0, 0, COLS * cellSize, ROWS * cellSize);
+    
+    ctx.fillStyle = '#15803d'; // Darker green pattern
+    for(let i=0; i<COLS; i++) {
+        for(let j=0; j<ROWS; j++) {
+            if ((i+j)%2 === 0) {
+                ctx.fillRect(i*cellSize, j*cellSize, cellSize, cellSize);
+            }
+        }
+    }
+
+    // Paths (Dirt)
+    ctx.fillStyle = '#b45309'; // Dirt color
+    let pWidth = 3 * cellSize;
+    
+    // Left path
+    ctx.fillRect(2.5 * cellSize, 6 * cellSize, pWidth, 20 * cellSize);
+    // Right path
+    ctx.fillRect(12.5 * cellSize, 6 * cellSize, pWidth, 20 * cellSize);
+    // King to Princess
+    ctx.fillRect(4 * cellSize, 25.5 * cellSize, 10 * cellSize, pWidth); // Player
+    ctx.fillRect(4 * cellSize, 3.5 * cellSize, 10 * cellSize, pWidth); // Enemy
+
+    // River flow animation
+    let rTime = globalTime;
+    
+    // Draw River Bank
+    ctx.fillStyle = '#7e22ce'; // Dark magenta bank
+    ctx.fillRect(0, 14.8*cellSize, COLS*cellSize, 2.9*cellSize);
+    
+    // Draw River
+    ctx.fillStyle = '#d946ef'; // Magenta Arcane River
+    ctx.fillRect(0, 15*cellSize, COLS*cellSize, 2.5*cellSize);
+    
+    // River glow/detail
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.fillRect(0, 15.2*cellSize + Math.sin(rTime*2)*0.1*cellSize, COLS*cellSize, 0.15*cellSize);
+    ctx.fillRect(0, 17.1*cellSize + Math.cos(rTime*2.5)*0.1*cellSize, COLS*cellSize, 0.1*cellSize);
+    
+    for(let i=0; i<COLS; i++) {
+        let px = ((rTime * 1.5 + i) % COLS) * cellSize;
+        ctx.fillRect(px, 15.8*cellSize + Math.sin(rTime*3 + i)*0.2*cellSize, 0.3*cellSize, 0.1*cellSize);
+    }
+
+    // Draw Bridges
+    let bw = 2.5 * cellSize;
+    let bh = 3.5 * cellSize;
+    let by = 14.5 * cellSize;
+    
+    // Left Bridge
+    ctx.fillStyle = '#451a03'; // Dark wood edge
+    ctx.fillRect(2.65 * cellSize, by, bw + 0.2*cellSize, bh);
+    ctx.fillStyle = '#78350f'; // Wood bridge
+    ctx.fillRect(2.75 * cellSize, by, bw, bh);
+    ctx.fillStyle = '#92400e'; // planks
+    for(let i=0; i<5; i++) ctx.fillRect(2.75*cellSize, by + i*(bh/5), bw, bh/5 - 1);
+    
+    // Right Bridge
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(12.65 * cellSize, by, bw + 0.2*cellSize, bh);
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(12.75 * cellSize, by, bw, bh);
+    ctx.fillStyle = '#92400e';
+    for(let i=0; i<5; i++) ctx.fillRect(12.75*cellSize, by + i*(bh/5), bw, bh/5 - 1);
+
+    
+    // Sort by Y for fake depth
+    entities.sort((a,b) => a.y - b.y);
+
+    // Draw Preview
+    if (selectedCardIdx >= 0 && hoverX >= 0 && hoverY >= 0 && hoverX <= COLS && hoverY <= ROWS) {
+        let cardId = hand[selectedCardIdx];
+        let card = CARDS_DB[cardId];
+        
+        let isValid = true;
+        if (card.type !== 'spell' && hoverY < 16) isValid = false;
+        if (elixir < card.cost) isValid = false;
+        
+        ctx.save();
+        ctx.globalAlpha = 0.4;
+        
+        // Indicate valid deployment zone
+        if (card.type !== 'spell') {
+            ctx.fillStyle = isValid ? 'rgba(59, 130, 246, 0.2)' : 'rgba(239, 68, 68, 0.2)';
+            ctx.fillRect(0, 16*cellSize, COLS*cellSize, (ROWS-16)*cellSize);
+            // Draw border at river
+            ctx.strokeStyle = isValid ? '#3b82f6' : '#ef4444';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([10, 10]);
+            ctx.beginPath();
+            ctx.moveTo(0, 16*cellSize);
+            ctx.lineTo(COLS*cellSize, 16*cellSize);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+        
+        let px = hoverX * cellSize;
+        let py = hoverY * cellSize;
+        
+        if (card.type === 'spell') {
+            let r = card.radius * cellSize;
+            ctx.beginPath();
+            ctx.arc(px, py, r, 0, Math.PI*2);
+            ctx.fillStyle = isValid ? 'rgba(217, 70, 239, 0.4)' : 'rgba(239, 68, 68, 0.4)';
+            ctx.fill();
+            ctx.strokeStyle = isValid ? '#d946ef' : '#ef4444';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        } else {
+            // Draw attack range indicator for troops/buildings
+            if (card.range > 0) {
+                let rangePx = card.range * cellSize;
+                ctx.beginPath();
+                ctx.arc(px, py, rangePx, 0, Math.PI*2);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        
+            let r = 1.2 * cellSize;
+            ctx.fillStyle = isValid ? '#1e40af' : '#7f1d1d';
+            ctx.beginPath(); ctx.ellipse(px, py + r*0.3, r, r/2, 0, 0, Math.PI*2); ctx.fill();
+            ctx.fillRect(px - r, py, r*2, r*0.3);
+            
+            ctx.fillStyle = isValid ? '#3b82f6' : '#ef4444';
+            ctx.beginPath(); ctx.ellipse(px, py, r, r/2, 0, 0, Math.PI*2); ctx.fill();
+            
+            ctx.font = `${r*1.4}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.globalAlpha = 0.8;
+            ctx.fillText(card.icon, px, py - r*0.2);
+        }
+        
+        ctx.restore();
+    }
+
+
+    // Update mesh positions
+    entities.forEach(e => {
+        if (e.updateMesh) e.updateMesh();
+    });
+
+    // Render 3D Scene
+    if (typeof threeRenderer !== 'undefined' && threeRenderer) {
+        threeRenderer.render(threeScene, threeCamera);
+        ctx.save();
+        ctx.resetTransform();
+        ctx.drawImage(threeRenderer.domElement, 0, 0);
+        ctx.restore();
+    }
+
+    entities.forEach(e => e.draw(ctx));
+    projectiles.forEach(p => p.draw(ctx));
+
+    // Draw effects
+    particles.forEach(p => p.draw(ctx));
+    effects.forEach(ef => {
+        let px = ef.x * cellSize;
+        let py = ef.y * cellSize;
+        let r = ef.radius * cellSize;
+        let p = 1.0 - (ef.time / 0.5); // 0.0 to 1.0
+        ctx.fillStyle = ef.type === 'meteoro' ? 'rgba(255, 100, 0, 0.4)' : ef.type === 'relampago' ? 'rgba(255, 255, 0, 0.6)' : 'rgba(217, 70, 239, 0.4)';
+        ctx.beginPath(); ctx.arc(px, py, r * (1.0 + p*0.2), 0, Math.PI*2); ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = ef.type === 'meteoro' ? 'rgba(255, 100, 0, 0.8)' : ef.type === 'relampago' ? 'rgba(255, 255, 0, 1.0)' : 'rgba(217, 70, 239, 0.8)';
+        ctx.beginPath(); ctx.arc(px, py, r * (1.0 + p*0.5), 0, Math.PI*2); ctx.stroke();
+    });
+
+    ctx.restore();
+}
+
+// --- UI Helpers ---
+function drawHpBar(ctx, x, y, hp, maxHp, level=null) {
+    let w = 36;
+    let h = 8;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(x - w/2, y, w, h);
+    
+    let isPlayer = (y > ROWS/2 * cellSize);
+    ctx.fillStyle = isPlayer ? '#3b82f6' : '#ef4444';
+    
+    let hpRatio = Math.max(0, hp/maxHp);
+    ctx.fillRect(x - w/2 + 1, y + 1, (w - 2) * hpRatio, h - 2);
+    
+    // HP text
+    ctx.font = '900 11px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = 'black';
+    ctx.strokeText(Math.floor(hp), x, y - 8);
+    ctx.fillStyle = 'white';
+    ctx.fillText(Math.floor(hp), x, y - 8);
+    
+    // Level badge
+    if (level !== null) {
+        let bx = x - w/2 - 6;
+        let by = y + h/2;
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.arc(bx, by, 8, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = isPlayer ? '#2563eb' : '#dc2626';
+        ctx.beginPath(); ctx.arc(bx, by, 7, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 9px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(level, bx, by + 1);
+    }
+}
+
+function updateUI() {
+    document.getElementById('elixir-fill').style.width = `${(elixir/10)*100}%`;
+    document.getElementById('elixir-text-num').innerText = Math.floor(elixir);
+
+    let m = Math.floor(gameTime / 60);
+    let s = Math.floor(gameTime % 60).toString().padStart(2, '0');
+    let timerEl = document.getElementById('timer');
+    timerEl.innerText = `${m}:${s}`;
+    if (isOvertime) timerEl.style.color = '#f87171';
+    
+    // Update card opacities based on cost
+    const slots = document.querySelectorAll('.card-slot');
+    slots.forEach((slot, i) => {
+        if(hand[i]) {
+            if (elixir >= CARDS_DB[hand[i]].cost) slot.classList.remove('disabled');
+            else slot.classList.add('disabled');
+        }
+    });
+}
+
+function renderHand() {
+    let container = document.getElementById('hand-slots');
+    container.innerHTML = '';
+    hand.forEach((cardId, i) => {
+        let card = CARDS_DB[cardId];
+        let el = document.createElement('div');
+        el.className = `card-slot ${selectedCardIdx === i ? 'selected' : ''}`;
+        el.innerHTML = `
+            <div class="card-cost">${card.cost}</div>
+            <div class="card-icon">${card.icon}</div>
+        `;
+        el.onclick = () => {
+            if (elixir < card.cost) return;
+            selectedCardIdx = selectedCardIdx === i ? -1 : i;
+            renderHand(); // re-render to update selected visual
+        };
+        container.appendChild(el);
+    });
+
+    let next = CARDS_DB[nextCard];
+    document.getElementById('next-icon').innerText = next.icon;
+}
+
+function spawnFloatText(text, x, y, color) {
+    let el = document.createElement('div');
+    el.className = 'float-text';
+    el.innerText = text;
+    el.style.color = color;
+    
+    let rect = canvas.getBoundingClientRect();
+    let offsetX = (cw - COLS * cellSize) / 2;
+    let offsetY = (ch - ROWS * cellSize) / 2;
+    
+    el.style.left = `${rect.left + offsetX + x * cellSize}px`;
+    el.style.top = `${rect.top + offsetY + y * cellSize}px`;
+    document.body.appendChild(el);
+    
+    setTimeout(() => el.remove(), 1000);
+}
+
+function showWarning(text) {
+    spawnFloatText(text, COLS/2, ROWS/2 + 2, '#ef4444');
+}
+
+function endGame(result) {
+    isGameOver = true;
+    let go = document.getElementById('game-over');
+    let title = document.getElementById('go-title');
+    go.style.display = 'flex';
+    if (result === 'win') { title.innerText = 'VITÓRIA!'; title.className = 'win'; }
+    else if (result === 'lose') { title.innerText = 'DERROTA!'; title.className = 'lose'; }
+    else { title.innerText = 'EMPATE'; title.className = 'draw'; }
+}
+
+function shuffle(arr) {
+    for(let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+}
+
+// Start
+initHub();
+
+</script>
+</div>
+</body>
+</html>

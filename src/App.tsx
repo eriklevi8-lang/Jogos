@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Settings, FlaskConical, Gem, Lock, Search, User, Pickaxe, Gamepad2 } from 'lucide-react';
+import { Settings, FlaskConical, Gem, Lock, Search, User, Pickaxe, Gamepad2, Swords } from 'lucide-react';
+
 import { motion, AnimatePresence } from 'motion/react';
 import { ParticlesBackground } from './components/ParticlesBackground';
 
@@ -33,6 +34,16 @@ const GAMES = [
     url: '/runa-master.html',
     req: 10,
     bgImage: 'linear-gradient(to bottom, rgba(74, 20, 140, 0.8), rgba(0,0,0,1))'
+  },
+  {
+    id: 'aether-royale',
+    title: 'Aether Royale',
+    subtitle: 'Batalha Arcana',
+    icon: Swords,
+    color: '#1d4ed8',
+    url: '/aether-royale.html',
+    req: 15,
+    bgImage: 'linear-gradient(to bottom, rgba(29, 78, 216, 0.8), rgba(0,0,0,1))'
   }
 ];
 
@@ -121,13 +132,12 @@ export default function App() {
     let minDiff = Infinity;
     let closestIndex = selectedIndex;
     
-    const children = Array.from(container.children);
+    const children = Array.from(container.children) as HTMLElement[];
     children.forEach((child) => {
       const idxStr = child.getAttribute('data-index');
       if (idxStr !== null) {
         const idx = parseInt(idxStr, 10);
-        const childEl = child as HTMLElement;
-        const childCenter = childEl.offsetLeft + childEl.offsetWidth / 2;
+        const childCenter = child.offsetLeft + child.offsetWidth / 2;
         const diff = Math.abs(center - childCenter);
         if (diff < minDiff) {
           minDiff = diff;
@@ -144,21 +154,21 @@ export default function App() {
   const scrollTo = (idx: number) => {
     if (!scrollRef.current) return;
     const container = scrollRef.current;
-    const children = Array.from(container.children);
-    const target = children.find(c => c.getAttribute('data-index') === idx.toString()) as HTMLElement;
+    const children = Array.from(container.children) as HTMLElement[];
+    const target = children.find(c => c.getAttribute('data-index') === idx.toString());
     if (target) {
       const scrollPos = target.offsetLeft - container.clientWidth / 2 + target.offsetWidth / 2;
       container.scrollTo({ left: scrollPos, behavior: 'smooth' });
     }
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
+  const handleTouchStart = (e: any) => {
     const target = e.target as HTMLElement;
     if (target.closest('.scrollbar-hide')) return; // Let carousel handle its own swipe
     touchStartRef.current = e.touches[0].clientX;
   };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
+  const handleTouchEnd = (e: any) => {
     if (touchStartRef.current === null) return;
     const touchEndX = e.changedTouches[0].clientX;
     const diff = touchStartRef.current - touchEndX;
@@ -186,7 +196,7 @@ export default function App() {
   };
 
   const selectedGame = GAMES[selectedIndex];
-  const isUnlocked = unlockedLevel >= selectedGame.req;
+  const isUnlocked = true; // Always unlocked
 
   if (!isReady) return null;
 
@@ -277,7 +287,7 @@ export default function App() {
           >
             {GAMES.map((game, idx) => {
               const isSelected = selectedIndex === idx;
-              const isGameUnlocked = unlockedLevel >= game.req;
+              const isGameUnlocked = true; // Always unlocked
               return (
                 <div 
                   key={game.id}

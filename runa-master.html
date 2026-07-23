@@ -30,6 +30,12 @@
             overflow: hidden;
             width: 100vw;
             height: 100vh;
+            margin: 0;
+            padding: 0;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         #game-canvas {
@@ -269,6 +275,9 @@
             init: function() {
                 if(!this.ctx) {
                     this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
                 }
             },
             playSynth: function(freq, type, duration, vol=0.1) {
@@ -513,12 +522,12 @@
         let touchStartY = 0;
         
         document.addEventListener('touchstart', e => {
-            touchStartX = e.changedTouches[0].screenX;
-            touchStartY = e.changedTouches[0].screenY;
+            touchStartX = e.changedTouches[0].clientX;
+            touchStartY = e.changedTouches[0].clientY;
         }, {passive: true});
 
         document.addEventListener('touchend', e => {
-            handleInputEnd(e.changedTouches[0].screenX, e.changedTouches[0].screenY);
+            handleInputEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
         });
         
         let isMouseDown = false;

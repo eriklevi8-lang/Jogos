@@ -16,7 +16,10 @@ export default defineConfig(() => {
         input: {
           main: path.resolve(__dirname, 'index.html'),
           craftMatch: path.resolve(__dirname, 'craft-match.html'),
-          potionMix: path.resolve(__dirname, 'potion-mix.html')
+          potionMix: path.resolve(__dirname, 'potion-mix.html'),
+          runaMaster: path.resolve(__dirname, 'runa-master.html'),
+          portalArcano: path.resolve(__dirname, 'portal-arcano.html'),
+          aetherRoyale: path.resolve(__dirname, 'aether-royale.html')
         }
       }
     },
